@@ -1,0 +1,2 @@
+class IpBlockedError(Exception):
+    pass

@@ -1,0 +1,9 @@
+HTTP/2 200
+
+access-control-allow-origin: *
+content-type: text/html; charset=utf-8
+content-length: 12
+date: Fri, 08 Oct 2021 12:22:25 GMT
+x-envoy-upstream-service-time: 1
+via: 1.1 google
+alt-svc: clear

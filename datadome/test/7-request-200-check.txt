@@ -1,0 +1,7 @@
+GET /captcha/check?cid=Xl9XWphwMqvETzF0wLhfakh-WBxBqptuQKVoYbHez682OCJUEaDhz3IYcr99m6qrWiETVSe.eJrjC2yhbC4T_Bk1zWAHzJ4kd8h1~sHp33&icid=AHrlqAAAAAMAVzOzW3-FrjYALU2VKg%3D%3D&ccid=null&hash=05B30BD9055986BD2EE8F5A199D973&referer=https%3A%2F%2Fapi.leboncoin.fr%2Ffinder%2Fsearch&parent_url=https%3A%2F%2Fgeo.captcha-delivery.com%2Fcaptcha%2F%3FinitialCid%3DAHrlqAAAAAMAVzOzW3-FrjYALU2VKg%3D%3D%26cid%3DXl9XWphwMqvETzF0wLhfakh-WBxBqptuQKVoYbHez682OCJUEaDhz3IYcr99m6qrWiETVSe.eJrjC2yhbC4T_Bk1zWAHzJ4kd8h1~sHp33%26referer%3Dhttps%253A%252F%252Fapi.leboncoin.fr%252Ffinder%252Fsearch%26hash%3D05B30BD9055986BD2EE8F5A199D973%26t%3Dfe%26s%3D7501&x-forwarded-for=&s=7501&captchaChallenge=8467780&geetest-response-challenge=42c5558df54c653c19151918278d5591ly&geetest-response-validate=3d916f0b35d11ac58f3fcf638aa59143&geetest-response-seccode=3d916f0b35d11ac58f3fcf638aa59143%7Cjordan&ua=Mozilla%2F5.0+%28Macintosh%3B+Intel+Mac+OS+X+10_15_7%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F90.0.4430.212+Safari%2F537.36 HTTP/1.1
+
+Host: geo.captcha-delivery.com
+Accept: */*
+Cookie: 
+upgrade-insecure-requests: 1
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36

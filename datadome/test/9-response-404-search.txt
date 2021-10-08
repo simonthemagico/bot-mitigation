@@ -1,0 +1,16 @@
+HTTP/2 404
+
+content-type: text/plain
+content-length: 18
+date: Fri, 08 Oct 2021 12:22:25 GMT
+vary: Accept-Encoding
+x-unique-id: pGM6G0sazwL0uQuy34chdvOhQ4XTugcYdNC88vIGMZ_goVV-b7H7DQ==
+strict-transport-security: max-age=15768000
+referrer-policy: no-referrer-when-downgrade
+content-security-policy-report-only: object-src *.leboncoin.fr *.leboncoin.io *.leboncoin.ci; frame-ancestors *.leboncoin.fr *.leboncoin.io *.leboncoin.ci *.adyen.com; report-uri https://api.leboncoin.fr/api/csp-report/v1/report/;
+x-datadome: protected
+set-cookie: datadome=OdJxAPwlikv~aVla1sgbLHM6t0px9-ewNsh6cE.IlLNeqMn18rohp-oQKn3mM7VXNoYWqNwRvoHQAUUhc66R8nDx6Bc9Ja9gkL5otZ1DHF; Max-Age=31536000; Domain=.leboncoin.fr; Path=/; Secure; SameSite=Lax
+x-cache: Error from cloudfront
+via: 1.1 b2cb5873eebaf86981435722128eab73.cloudfront.net (CloudFront)
+x-amz-cf-pop: EWR52-C4
+x-amz-cf-id: pGM6G0sazwL0uQuy34chdvOhQ4XTugcYdNC88vIGMZ_goVV-b7H7DQ==
