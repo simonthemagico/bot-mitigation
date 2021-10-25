@@ -26,3 +26,9 @@ class GeoCaptchaCheckPage(JsonPage):
     def get_cookies(self):
         cookie = Dict("cookie")(self.doc)
         return cookie.split(';')[0].split('=')
+
+class DatadomeSdkPage(JsonPage):
+
+    def get_cookies(self):
+        cookie = Dict("cookie")(self.doc)
+        return cookie.split(';')[0].split('=')

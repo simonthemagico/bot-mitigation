@@ -1,0 +1,21 @@
+HTTP/2 200
+
+content-type: text/html; charset=utf-8
+content-length: 91337
+vary: Accept-Encoding
+date: Mon, 25 Oct 2021 13:03:11 GMT
+x-protected-by: Sqreen
+cache-control: public
+expires: Mon, 25 Oct 2021 13:13:10 GMT
+etag: "164c9-LP8MDTXVf8S9dxxwitxVIfUEaR8"
+vary: Accept-Encoding
+strict-transport-security: max-age=15768000
+referrer-policy: no-referrer-when-downgrade
+content-security-policy: frame-ancestors *.leboncoin.fr *.leboncoin.io *.leboncoin.ci; report-uri https://api.leboncoin.fr/api/csp-report/v1/report/;
+content-security-policy-report-only: object-src *.leboncoin.fr *.leboncoin.io *.leboncoin.ci; frame-ancestors *.leboncoin.fr *.leboncoin.io *.leboncoin.ci; report-uri https://api.leboncoin.fr/api/csp-report/v1/report/;
+x-datadome: protected
+set-cookie: datadome=L5mzSAF9dELC5bWJ8.760BF2jKuVrNUSrsBmuS4~KU0~.p3uRnIu5US5MTN62fdw4dwkM7W2Um-TfDsZ0SCxkv_foBADCQOAV2J9RLtJsR; Max-Age=31536000; Domain=.leboncoin.fr; Path=/; Secure; SameSite=Lax
+x-cache: Miss from cloudfront
+via: 1.1 22513a5f32c464af3c0b3d4e3c135033.cloudfront.net (CloudFront)
+x-amz-cf-pop: LHR3-C1
+x-amz-cf-id: OXcyTMZAl7ysIDMKTvEcL0Hit90Ut_6tQnal-hESp1_UBsSnNJN77w==

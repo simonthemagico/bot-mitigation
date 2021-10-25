@@ -1,7 +1,7 @@
-GET /captcha/?initialCid=AHrlqAAAAAMAVzOzW3-FrjYALU2VKg==&cid=Xl9XWphwMqvETzF0wLhfakh-WBxBqptuQKVoYbHez682OCJUEaDhz3IYcr99m6qrWiETVSe.eJrjC2yhbC4T_Bk1zWAHzJ4kd8h1~sHp33&referer=https%3A%2F%2Fapi.leboncoin.fr%2Ffinder%2Fsearch&hash=05B30BD9055986BD2EE8F5A199D973&t=fe&s=7501 HTTP/1.1
+GET /captcha/?initialCid=AHrlqAAAAAMAASxYT06hTSoAuQ1q4w==&hash=05B30BD9055986BD2EE8F5A199D973&cid=R8CSaQzpTzx4NuLnU5yOjA32oAq7VMbW.ifYpc0QSgEJzEB0LYNVsCl_QBhE5gImCR477NlnogxhV1v.5mhDa.UJ.v6vgfm-Bh60byFCY7&t=fe&referer=https%3A//www.leboncoin.fr/&s=2089 HTTP/1.1
 
 Host: geo.captcha-delivery.com
 Accept: */*
 Cookie: 
 upgrade-insecure-requests: 1
-user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36

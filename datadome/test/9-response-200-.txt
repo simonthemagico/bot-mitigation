@@ -1,0 +1,14 @@
+HTTP/2 200
+
+content-type: application/json;charset=utf-8
+content-length: 211
+date: Mon, 25 Oct 2021 13:03:07 GMT
+server: DataDome
+access-control-allow-origin: *
+pragma: no-cache
+cache-control: no-cache, no-store, must-revalidate
+expires: 0
+x-cache: Miss from cloudfront
+via: 1.1 9551d2053009d30092446f10802ce2c1.cloudfront.net (CloudFront)
+x-amz-cf-pop: CDG53-C1
+x-amz-cf-id: kSYMLyJ5xq1s5oaW-25mwUQaoODdIMg45OFGzwjLhEcvYf7B1INoHA==

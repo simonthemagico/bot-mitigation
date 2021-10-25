@@ -1,0 +1,11 @@
+POST /api/utils/phonenumber.json HTTP/2
+
+Host: api.leboncoin.fr
+accept: */*
+cookie: datadome=HiJmbyaYUFzUSsXV_Hyjl-2t5andQk6d79n4W6X-qOk6WzXR~dERoA0.9MqGqu98Y7hUFGcx4y-6rcnZ.AKR_RmBhOgocQHQcf-pD2v9xr
+upgrade-insecure-requests: 1
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36
+content-type: application/x-www-form-urlencoded
+referer: https://www.leboncoin.fr/
+
+app_id=leboncoin_web_utils&key=54bb0281238b45a03f0ee695f73e704f&list_id=2030643854&text=1

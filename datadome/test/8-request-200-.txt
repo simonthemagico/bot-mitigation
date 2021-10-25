@@ -1,6 +1,6 @@
-CONNECT geo.captcha-delivery.com:443 HTTP/1.1
+CONNECT dd.leboncoin.fr:443 HTTP/1.1
 
-Host: geo.captcha-delivery.com:443
+Host: dd.leboncoin.fr:443
 Proxy-Authorization: Basic dXNlci10eXR5dHl0eS1zZXNzaW9uZHVyYXRpb24tMzA6YWx0aXVzMjAxMA==
 User-Agent: PycURL/7.44.1 libcurl/7.68.0 OpenSSL/1.1.1f zlib/1.2.11 brotli/1.0.7 libidn2/2.2.0 libpsl/0.21.0 (+libidn2/2.2.0) libssh/0.9.3/openssl/zlib nghttp2/1.40.0 librtmp/2.3
 Proxy-Connection: Keep-Alive

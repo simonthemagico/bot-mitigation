@@ -1,0 +1,10 @@
+POST /finder/search HTTP/2
+
+Host: api.leboncoin.fr
+accept: */*
+cookie: datadome=YYZHAxttsWrZUL-kDaCd.HhbbgySwlGJfsPWjmAg37x9YK2gXsuz0DMyb6tbZw8QvtrEbJo.C5V7uE_I8VMrdlVOdBROy9CO7ohly3Emkx
+upgrade-insecure-requests: 1
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36
+content-type: application/json
+
+{"owner_type": "all", "limit": 35, "limit_alu": 3, "sort_by": "relevance", "sort_order": "desc", "filters": {"enums": {"ad_type": ["offer"]}}, "offset": 0}

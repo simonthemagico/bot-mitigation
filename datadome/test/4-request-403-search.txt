@@ -1,7 +1,0 @@
-GET /finder/search HTTP/2
-
-Host: api.leboncoin.fr
-accept: */*
-cookie: 
-upgrade-insecure-requests: 1
-user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36

@@ -1,0 +1,7 @@
+GET / HTTP/2
+
+Host: www.leboncoin.fr
+accept: */*
+cookie: datadome=KN34Y~HhQAkcnu5rN64Lb0cn9Tk1X-eaIaw4CrVOdMCl8ouhNcvQjC3~3RSvtx0TFAZKPI-w8pa_GTi5f_OgJjnwQ2xVjMj~CijVfOVEYZ
+upgrade-insecure-requests: 1
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36
