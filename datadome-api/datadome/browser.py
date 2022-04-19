@@ -20,6 +20,7 @@ from .solver import Speech2Text
 from urllib.parse import urlparse
 
 import random
+import os
 
 MAX_REQUESTS = 20
 
@@ -32,7 +33,7 @@ def with_retries(f):
     @retry(PycurlStreamError, tries=10, delay=5, backoff=0)
     @retry(BrowserSSLError, tries=4, delay=1, backoff=1)
     @retry(ConnectionResetByPeer, tries=6, delay=20, backoff=0)
-    @retry(IpBlockedError, tries=3, delay=2, backoff=0)
+    # @retry(IpBlockedError, tries=3, delay=2, backoff=0)
     @retry(SimpleJSONDecodeError, tries=3, delay=10, backoff=0)
     @retry(Speech2TextException, tries=6, delay=30, backoff=0)
     @retry(ProxyError, tries=3, delay=5, backoff=0)
@@ -95,6 +96,7 @@ class DatadomeSolver(PyCurlBrowser):
     TIMEOUT = 20
 
     BASEURL = 'https://data_solver.com'
+    HTTP2 = True
 
     geo_captcha_check_page = URL(r'https://geo.captcha-delivery.com/captcha/check', GeoCaptchaCheckPage)
     geo_captcha_page = URL(r'https://geo.captcha-delivery.com/captcha/', GeoCaptchaPage)
@@ -103,11 +105,12 @@ class DatadomeSolver(PyCurlBrowser):
         super(DatadomeSolver, self).__init__(*args, **kwargs)
         self.request_count = 0
         self.set_user_agent()
+        self.proxy_pool = kwargs.get('proxy_pool')
         self.set_random_proxy()
         self.domain = None
 
     def set_user_agent(self):
-        user_agents = ["Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:94.0) Gecko/20100101 Firefox/94.0"]
+        user_agents = ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"]
         self.user_agent = random.choice(user_agents)
 
     @with_retries
@@ -129,6 +132,23 @@ class DatadomeSolver(PyCurlBrowser):
             "username": "user-uuid-6ae9801d46e94ad59ac7f057ce261581",
             "password": "4ebe43e321d2"
         }
+        if self.proxy_pool == 'smartproxy':
+            file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../proxies/smartproxy.txt")
+            with open(file_path) as f:
+                proxy_string = random.choice(f.read().splitlines())
+                value_list = [value.strip() for value in proxy_string.split(":")]
+
+                self.logger.critical("proxy: {}".format(proxy_string))
+
+                curl_proxies = {
+                    "host": value_list[0],
+                    "port": int(value_list[1]),
+                    "username": value_list[2],
+                    "password": value_list[3]
+                }
+
+                self.session.PROXIES = curl_proxies
+                self.session.cookies.clear()
 
     def bypass_page(self, link):
         headers = {

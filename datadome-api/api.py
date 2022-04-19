@@ -1,28 +1,39 @@
+import traceback
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from datadome import DatadomeSolver
 from pydantic import BaseModel
 import validators
 
-ALLOWED_URLS = ["shopping.rakuten.com"]
+CUID_URLS = {
+    "cl1uci9tv00000al9553aekn3": "shopping.rakuten.com",
+    "cl2617ro9000009mo0vs8gfvu": "leboncoin.fr"
+}
+
+POOL_USES = {
+    "leboncoin.fr": "smartproxy"
+}
 
 class Request(BaseModel):
     url: str
+    proxy_string: str = None
 
 app = FastAPI()
 
-@app.post("/cl1uci9tv00000al9553aekn3")
-async def root(request: Request):
+@app.post("/bypass/{cuid}")
+async def root(request: Request, cuid: str):
+    if not cuid:
+        raise HTTPException(status_code=404, detail="not found")
     try:
         validators.domain(request.url)
-        for url in ALLOWED_URLS:
-            if not (url in request.url):
-                raise HTTPException(status_code=400, detail="bad url")
+        url = CUID_URLS[cuid]
+        if not (url in request.url):
+            raise HTTPException(status_code=400, detail="bad url")
     except validators.ValidationFailure:
         raise HTTPException(status_code=404, detail="not found")
 
     try:
-        solver = DatadomeSolver()
+        solver = DatadomeSolver(proxy_pool=POOL_USES.get(url))
         cookie = solver.go_to(request.url)
         return {
             "status": "success",
@@ -31,7 +42,7 @@ async def root(request: Request):
     except Exception as e:
         raise HTTPException(status_code=400, detail={
             "status": "error",
-            "exc": str(e)
+            "exc": e.__class__.__name__
         })
 
 if __name__ == "__main__":
