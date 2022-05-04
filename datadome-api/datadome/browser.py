@@ -33,6 +33,7 @@ def with_retries(f):
     @retry(PycurlStreamError, tries=10, delay=5, backoff=0)
     @retry(BrowserSSLError, tries=4, delay=1, backoff=1)
     @retry(ConnectionResetByPeer, tries=6, delay=20, backoff=0)
+    @retry(Speech2TextException, tries=3, delay=2, backoff=0)
     # @retry(IpBlockedError, tries=3, delay=2, backoff=0)
     @retry(SimpleJSONDecodeError, tries=3, delay=10, backoff=0)
     @retry(Speech2TextException, tries=6, delay=30, backoff=0)
@@ -69,16 +70,17 @@ def with_bypass(f):
             try:
                 url = json.loads(e.response.text).get('url')
             except JSONDecodeError:
-                match = re.findall(r"'cid':'(?P<initialCid>.+?)','hsh':'(?P<hash>[0-9A-Z]+)','t':'(?P<te>[a-z]+)','s':(?P<s>\d+)", e.response.text)
+                match = re.findall(r"'cid':'(?P<initialCid>.+?)','hsh':'(?P<hash>[0-9A-Z]+)','t':'(?P<te>[a-z]+)','s':(?P<s>\d+),'e':'([0-9a-z]+)'", e.response.text)
                 if match:
-                    initialCid, _hash, t, s  = match[0]
-                    url = 'https://geo.captcha-delivery.com/captcha/?initialCid={initialCid}&hash={hash}&cid={cid}&t={t}&referer={referer}&s={s}' \
+                    initialCid, _hash, t, s, _e  = match[0]
+                    url = 'https://geo.captcha-delivery.com/captcha/?initialCid={initialCid}&hash={hash}&cid={cid}&t={t}&referer={referer}&s={s}&e={e}' \
                                 .format(
                                     initialCid=initialCid,
                                     cid=cid,
                                     hash=_hash,
                                     t=t,
                                     s=s,
+                                    e=_e,
                                     referer=quote(e.response.url)
                                 )
                     self.logger.warning("captcha: " + url)
@@ -170,7 +172,8 @@ class DatadomeSolver(PyCurlBrowser):
         cid = re.findall(r'cid=(.+?)&', link)[0]
         referer = unquote(re.findall(r'referer=(.+?)&', link)[0])
         hash = re.findall(r'hash=(.+?)&', link)[0]
-        s = re.findall(r's=(.+?)$', link)[0]
+        s = re.findall(r's=(\d+)', link)[0]
+        e = re.findall(r'e=(.+?)$', link)[0]
 
         self.params = {
             'cid': cid,
@@ -181,6 +184,7 @@ class DatadomeSolver(PyCurlBrowser):
             'parent_url': link,
             'x-forwarded-for': '',
             's': s,
+            'userEnv': e
         }
 
         self.params['captchaChallenge'] = self.get_id()

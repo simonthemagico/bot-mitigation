@@ -11,7 +11,8 @@ CUID_URLS = {
 }
 
 POOL_USES = {
-    "leboncoin.fr": "smartproxy"
+    "leboncoin.fr": "smartproxy",
+    "shopping.rakuten.com": "smartproxy"
 }
 
 class Request(BaseModel):
