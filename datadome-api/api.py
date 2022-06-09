@@ -7,12 +7,14 @@ import validators
 
 CUID_URLS = {
     "cl1uci9tv00000al9553aekn3": "shopping.rakuten.com",
-    "cl2617ro9000009mo0vs8gfvu": "leboncoin.fr"
+    "cl2617ro9000009mo0vs8gfvu": "leboncoin.fr",
+    "cl3ibwlga000009ln44yhgzmw": "seloger.com"
 }
 
 POOL_USES = {
     "leboncoin.fr": "smartproxy",
-    "shopping.rakuten.com": "smartproxy"
+    "shopping.rakuten.com": "smartproxy",
+    "seloger.com": "smartproxy-full"
 }
 
 class Request(BaseModel):
@@ -34,17 +36,19 @@ async def root(request: Request, cuid: str):
         raise HTTPException(status_code=404, detail="not found")
 
     try:
-        solver = DatadomeSolver(proxy_pool=POOL_USES.get(url))
+        solver = DatadomeSolver(proxy_pool=POOL_USES.get(url), proxy_string=request.proxy_string)
         cookie = solver.go_to(request.url)
         return {
             "status": "success",
             "cookies": cookie
         }
     except Exception as e:
+        print(traceback.format_exc())
         raise HTTPException(status_code=400, detail={
             "status": "error",
             "exc": e.__class__.__name__
         })
 
 if __name__ == "__main__":
-    uvicorn.run("api:app", host="0.0.0.0", port=8005, reload=True)
+    # uvicorn api:app --host 0.0.0.0 --port 8005 --workers 10
+    uvicorn.run("api:app", host="0.0.0.0", port=8005, reload=False)

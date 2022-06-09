@@ -34,7 +34,6 @@ def with_retries(f):
     @retry(BrowserSSLError, tries=4, delay=1, backoff=1)
     @retry(ConnectionResetByPeer, tries=6, delay=20, backoff=0)
     @retry(Speech2TextException, tries=3, delay=2, backoff=0)
-    # @retry(IpBlockedError, tries=3, delay=2, backoff=0)
     @retry(SimpleJSONDecodeError, tries=3, delay=10, backoff=0)
     @retry(Speech2TextException, tries=6, delay=30, backoff=0)
     @retry(ProxyError, tries=3, delay=5, backoff=0)
@@ -65,7 +64,7 @@ def with_bypass(f):
             cid = self.session.cookies.get("datadome")
             self.session.cookies.clear()
             if e.response.status_code != 403:
-                raise ClientError(e) from e
+                raise Exception(e) from e
             self.datadome_done = True
             try:
                 url = json.loads(e.response.text).get('url')
@@ -108,6 +107,7 @@ class DatadomeSolver(PyCurlBrowser):
         self.request_count = 0
         self.set_user_agent()
         self.proxy_pool = kwargs.get('proxy_pool')
+        self.proxy_string = kwargs.get('proxy_string')
         self.set_random_proxy()
         self.domain = None
 
@@ -134,8 +134,21 @@ class DatadomeSolver(PyCurlBrowser):
             "username": "user-uuid-6ae9801d46e94ad59ac7f057ce261581",
             "password": "4ebe43e321d2"
         }
-        if self.proxy_pool == 'smartproxy':
-            file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../proxies/smartproxy.txt")
+        if self.proxy_string:
+            value_list = [value.strip() for value in self.proxy_string.split(":")]
+            self.logger.critical("proxy: {}".format(self.proxy_string))
+
+            curl_proxies = {
+                "host": value_list[0],
+                "port": int(value_list[1]),
+                "username": value_list[2],
+                "password": value_list[3]
+            }
+
+            self.session.PROXIES = curl_proxies
+            self.session.cookies.clear()
+        elif self.proxy_pool:
+            file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../proxies/{}.txt".format(self.proxy_pool))
             with open(file_path) as f:
                 proxy_string = random.choice(f.read().splitlines())
                 value_list = [value.strip() for value in proxy_string.split(":")]
