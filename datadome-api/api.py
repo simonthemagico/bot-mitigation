@@ -1,5 +1,7 @@
 import traceback
 import uvicorn
+import uuid
+import os
 from fastapi import FastAPI, HTTPException
 from datadome import DatadomeSolver
 from pydantic import BaseModel
@@ -36,7 +38,8 @@ async def root(request: Request, cuid: str):
         raise HTTPException(status_code=404, detail="not found")
 
     try:
-        solver = DatadomeSolver(proxy_pool=POOL_USES.get(url), proxy_string=request.proxy_string)
+        solver = DatadomeSolver(proxy_pool=POOL_USES.get(url), proxy_string=request.proxy_string, responses_dirname=os.path.join("/data/logs/", "conn_{}".format(uuid.uuid4().hex)))
+        # solver = DatadomeSolver(proxy_pool=POOL_USES.get(url), proxy_string=request.proxy_string)
         cookie = solver.go_to(request.url)
         return {
             "status": "success",
