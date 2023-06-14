@@ -1,4 +1,4 @@
-martproxy.com:40001:user-sp0e9f6467-sessionduration-30:altius2010
+fr.smartproxy.com:40001:user-sp0e9f6467-sessionduration-30:altius2010
 fr.smartproxy.com:40002:user-sp0e9f6467-sessionduration-30:altius2010
 fr.smartproxy.com:40003:user-sp0e9f6467-sessionduration-30:altius2010
 fr.smartproxy.com:40004:user-sp0e9f6467-sessionduration-30:altius2010

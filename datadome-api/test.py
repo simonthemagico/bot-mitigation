@@ -1,7 +1,10 @@
 from datadome.browser import DatadomeSolver
 
 def test_rakuten():
-    b = DatadomeSolver()
+    b = DatadomeSolver(
+        proxy_pool='smartproxy-dc',
+    )
+    b.set_random_proxy()
     response = b.go_to('https://fr.shopping.rakuten.com/event/jeux-video-et-consoles')
     print(response)
 
@@ -11,4 +14,5 @@ def test_leboncoin():
     print(response)
 
 if __name__=="__main__":
-    test_leboncoin()
+    test_rakuten()
+    # test_leboncoin()

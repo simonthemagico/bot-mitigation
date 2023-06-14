@@ -10,13 +10,15 @@ import validators
 CUID_URLS = {
     "cl1uci9tv00000al9553aekn3": "shopping.rakuten.com",
     "cl2617ro9000009mo0vs8gfvu": "leboncoin.fr",
-    "cl3ibwlga000009ln44yhgzmw": "seloger.com"
+    "cl3ibwlga000009ln44yhgzmw": "seloger.com",
+    "clivpe56n000008kz4h693ot5": "pointp.fr",
 }
 
 POOL_USES = {
     "leboncoin.fr": "smartproxy",
     "shopping.rakuten.com": "smartproxy",
-    "seloger.com": "smartproxy-full"
+    "seloger.com": "smartproxy-full",
+    "pointp.fr": "smartproxy-dc",
 }
 
 class Request(BaseModel):
