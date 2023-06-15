@@ -34,6 +34,7 @@ from functools import wraps
 
 from monseigneur.core.browser.pages import HTMLPage, JsonPage
 from monseigneur.core.browser.filters.json import Dict
+import tldextract
 
 MAX_REQUESTS = 20
 
@@ -175,7 +176,7 @@ class DatadomeSolver(PyCurlBrowser):
     # HTTP2 = True
     BASEURL = "https://geo.captcha-delivery.com"
     PRESERVE_HEADERS = False
-    UA_TYPE = "webview" # "desktop" or "app" or "webview"
+    UA_TYPE = "desktop" # "desktop" or "app" or "webview"
 
     geo_captcha_check_page = URL(r'https://geo.captcha-delivery.com/captcha/check', GeoCaptchaCheckPage)
     geo_captcha_page = URL(r'https://geo.captcha-delivery.com/captcha/', GeoCaptchaPage)
@@ -735,9 +736,10 @@ class DatadomeSolver(PyCurlBrowser):
 
     @with_retries
     @with_bypass
-    def go_to(self, link):
+    def go_to(self, link, html_only=False):
         try:
-            self.domain = urlparse(link).netloc
+            extracted = tldextract.extract(link)
+            self.domain = '.' + '.'.join([extracted.domain, extracted.suffix])
         except Exception as e:
             raise e
         # parse origin from link
@@ -746,8 +748,10 @@ class DatadomeSolver(PyCurlBrowser):
         except Exception as e:
             raise e
         self.location(link)
+        if html_only:
+            return self.response.text
         return {
-            "datadome": self.session.cookies.get('datadome', domain=self.domain)
+            "datadome": self.session.cookies.get('datadome')
         }
 
 if __name__ == '__main__':
