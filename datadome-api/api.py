@@ -4,11 +4,13 @@ import uuid
 import os
 from fastapi import FastAPI, HTTPException
 from typing import Dict, Optional
+from urllib.parse import urlparse
 from datadome import DatadomeSolver
 from config import RESPONSES_DIRNAME, SESSION_EXPIRE_HOURS
 from pydantic import BaseModel
 import validators
 from datetime import datetime, timedelta
+from tldextract import extract
 
 # background tasks
 from fastapi import BackgroundTasks
@@ -30,8 +32,9 @@ POOL_USES = {
 }
 
 class BrowserSession:
-    def __init__(self, browser, timestamp):
+    def __init__(self, browser, domain, timestamp):
         self.browser = browser
+        self.domain = domain
         self.timestamp = timestamp
 
 class SessionID(BaseModel):
@@ -105,7 +108,11 @@ async def setup_session(request: Request):
             raise HTTPException(status_code=400, detail="bad url")
         session_id = str(uuid.uuid4())
         solver = DatadomeSolver(proxy_pool=proxy_pool, proxy_string=proxy_string, responses_dirname=os.path.join(RESPONSES_DIRNAME, "conn_{}".format(session_id)))
-        sessions[session_id] = BrowserSession(solver, datetime.now())
+        sessions[session_id] = BrowserSession(
+            browser=solver,
+            domain=url,
+            timestamp=datetime.now()
+        )
         return {"status": "success", "session_id": session_id}
     except Exception as e:
         print(traceback.format_exc())
@@ -121,6 +128,11 @@ async def perform_request(request: SessionID):
         if session_id in sessions:
             del sessions[session_id]  # remove expired session
         raise HTTPException(status_code=404, detail="session not found or expired")
+
+    domain = sessions[session_id].domain
+    # check if request url is valid and matches the domain of the session
+    if extract(request.url).registered_domain != domain:
+        raise HTTPException(status_code=400, detail="bad url")
 
     try:
         browser = sessions[session_id].browser
