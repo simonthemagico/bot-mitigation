@@ -51,6 +51,8 @@ def with_bypass(f):
             if e.response.status_code == 429:
                 self.set_random_proxy()
                 raise e
+            if e.response.status_code == 410:
+                return 
             if e.response.status_code != 403:
                 raise e
             if e.response.status_code == 403 and '<title>403</title>403 Forbidden' in e.response.text:
@@ -747,7 +749,13 @@ class DatadomeSolver(PyCurlBrowser):
             self.origin = urlparse(link).scheme + "://" + urlparse(link).netloc
         except Exception as e:
             raise e
-        self.location(link)
+        try:
+            self.location(link)
+        except ClientError as e:
+            if e.response.status_code == 410:
+                self.response = e.response
+            else:
+                raise e
         if html_only:
             return self.response.text
         return {

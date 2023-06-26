@@ -4,7 +4,6 @@ import uuid
 import os
 from fastapi import FastAPI, HTTPException
 from typing import Dict, Optional
-from urllib.parse import urlparse
 from datadome import DatadomeSolver
 from config import RESPONSES_DIRNAME, SESSION_EXPIRE_HOURS
 from pydantic import BaseModel
@@ -27,7 +26,7 @@ CUID_URLS = {
 POOL_USES = {
     "leboncoin.fr": "smartproxy",
     "shopping.rakuten.com": "smartproxy",
-    "seloger.com": "smartproxy-full",
+    "seloger.com": "smartproxy",
     "pointp.fr": "smartproxy-dc",
 }
 
@@ -137,7 +136,7 @@ async def perform_request(request: SessionID):
     try:
         browser = sessions[session_id].browser
         html = browser.go_to(request.url, html_only=True)
-        return {"status": "success", "html": html}
+        return {"status": "success", "html": html, "status_code": browser.response.status_code}
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=400, detail={
