@@ -16,6 +16,13 @@ from fastapi import BackgroundTasks
 from starlette.background import BackgroundTasks
 import asyncio
 
+# slowapi
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.extension import Limiter
+from slowapi.util import get_remote_address
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
+
 CUID_URLS = {
     "cl1uci9tv00000al9553aekn3": "shopping.rakuten.com",
     "cl2617ro9000009mo0vs8gfvu": "leboncoin.fr",
@@ -39,6 +46,10 @@ class BrowserSession:
 class SessionID(BaseModel):
     session_id: str
     url: Optional[str] = None
+    method: Optional[str] = 'GET'
+    data: Optional[Dict[str, str]] = None
+    headers: Optional[Dict[str, str]] = None
+    json_data: Optional[Dict[str, str]] = None
 
 sessions: Dict[str, BrowserSession] = {}
 
@@ -46,7 +57,16 @@ class Request(BaseModel):
     url: str
     proxy_string: str = None
 
+# create an instance of Limiter that will be used by the middleware
+limiter = Limiter(key_func=get_remote_address, default_limits=["30/minute"])
+
 app = FastAPI()
+app.state.limiter = limiter
+# Rate limiting
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(
+    SlowAPIMiddleware
+)
 
 async def cleanup_sessions():
     while True:
@@ -135,8 +155,19 @@ async def perform_request(request: SessionID):
 
     try:
         browser = sessions[session_id].browser
-        html = browser.go_to(request.url, html_only=True)
-        return {"status": "success", "html": html, "status_code": browser.response.status_code}
+        kwargs = {
+            "url": request.url,
+            "method": request.method,
+            "data": request.data,
+            "json": request.json_data,
+            "headers": request.headers or {}
+        }
+        response = browser.goto(**kwargs)
+        return {
+            "status": "success",
+            "response": response,
+            "cookies": browser.get_cookies()
+        }
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=400, detail={

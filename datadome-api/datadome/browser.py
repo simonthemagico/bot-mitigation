@@ -174,7 +174,7 @@ class DatadomeSdkPage(JsonPage):
 
 class DatadomeSolver(PyCurlBrowser):
 
-    TIMEOUT = 5
+    TIMEOUT = 30
     # HTTP2 = True
     BASEURL = "https://geo.captcha-delivery.com"
     PRESERVE_HEADERS = False
@@ -738,29 +738,39 @@ class DatadomeSolver(PyCurlBrowser):
 
     @with_retries
     @with_bypass
-    def go_to(self, link, html_only=False):
+    def goto(self, url, headers, method, data, json):
         try:
-            extracted = tldextract.extract(link)
+            extracted = tldextract.extract(url)
             self.domain = '.' + '.'.join([extracted.domain, extracted.suffix])
         except Exception as e:
             raise e
         # parse origin from link
         try:
-            self.origin = urlparse(link).scheme + "://" + urlparse(link).netloc
+            self.origin = urlparse(url).scheme + "://" + urlparse(url).netloc
         except Exception as e:
             raise e
         try:
-            self.location(link)
+            if json:
+                self.location(url, method=method, json=json, headers=headers)
+            else:
+                self.location(url, method=method, data=data, headers=headers)
         except ClientError as e:
             if e.response.status_code == 410:
                 self.response = e.response
             else:
                 raise e
-        if html_only:
-            return self.response.text
         return {
-            "datadome": self.session.cookies.get('datadome')
+            "status_code": self.response.status_code,
+            "text": self.response.text,
+            "headers": self.response.headers,
+            "request": self.response.request,
         }
+
+    def get_cookies(self):
+        cookies = {}
+        for cookie in self.session.cookies:
+            cookies[cookie.name] = cookie.value
+        return cookies
 
 if __name__ == '__main__':
     b = DatadomeSolver()
