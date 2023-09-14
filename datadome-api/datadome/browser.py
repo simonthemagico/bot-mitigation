@@ -175,7 +175,7 @@ class DatadomeSdkPage(JsonPage):
 class DatadomeSolver(PyCurlBrowser):
 
     TIMEOUT = 30
-    # HTTP2 = True
+    HTTP2 = True
     BASEURL = "https://geo.captcha-delivery.com"
     PRESERVE_HEADERS = False
     UA_TYPE = "desktop" # "desktop" or "app" or "webview"
@@ -210,11 +210,11 @@ class DatadomeSolver(PyCurlBrowser):
         self.user_agent = self.web_user_agent
         self.session.headers.update({'User-Agent': self.user_agent})
 
-        os.environ["CURL_IMPERSONATE"] = "chrome101"
+        os.environ["CURL_IMPERSONATE"] = "ff102"
         self.set_random_proxy()
 
     def set_user_agent(self):
-        self.web_user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
+        self.web_user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/114.0'
 
     def set_random_proxy(self):
         proxy = self.get_random_proxy()

@@ -28,6 +28,7 @@ CUID_URLS = {
     "cl2617ro9000009mo0vs8gfvu": "leboncoin.fr",
     "cl3ibwlga000009ln44yhgzmw": "seloger.com",
     "clivpe56n000008kz4h693ot5": "pointp.fr",
+    "clmiojq2d000008me63m92b8x": "sos-accessoire.com"
 }
 
 POOL_USES = {
@@ -35,6 +36,7 @@ POOL_USES = {
     "shopping.rakuten.com": "smartproxy",
     "seloger.com": "smartproxy",
     "pointp.fr": "smartproxy-dc",
+    "sos-accessoire.com": "smartproxy"
 }
 
 class BrowserSession:
@@ -50,6 +52,14 @@ class SessionID(BaseModel):
     data: Optional[Dict[str, str]] = None
     headers: Optional[Dict[str, str]] = None
     json_data: Optional[Dict[str, str]] = None
+
+class BypassURL(BaseModel):
+    url: str
+    headers: Optional[Dict[str, str]] = None
+    method: Optional[str] = 'GET'
+    data: Optional[Dict[str, str]] = None
+    json_data: Optional[Dict[str, str]] = None
+    proxy_string: Optional[str] = None
 
 sessions: Dict[str, BrowserSession] = {}
 
@@ -91,7 +101,7 @@ async def startup_event():
     task.add_task(cleanup_sessions)
 
 @app.post("/bypass/{cuid}")
-async def root(request: Request, cuid: str):
+async def root(cuid: str, request: BypassURL):
     if not cuid:
         raise HTTPException(status_code=404, detail="not found")
     try:
@@ -103,9 +113,19 @@ async def root(request: Request, cuid: str):
         raise HTTPException(status_code=404, detail="not found")
 
     try:
-        solver = DatadomeSolver(proxy_pool=POOL_USES.get(url), proxy_string=request.proxy_string, responses_dirname=os.path.join(RESPONSES_DIRNAME, "conn_{}".format(uuid.uuid4().hex)))
+        solver = DatadomeSolver(
+            proxy_pool=POOL_USES.get(url),
+            proxy_string=request.proxy_string,
+            responses_dirname=os.path.join(RESPONSES_DIRNAME, "conn_{}".format(uuid.uuid4().hex)),
+        )
         # solver = DatadomeSolver(proxy_pool=POOL_USES.get(url), proxy_string=request.proxy_string)
-        cookie = solver.go_to(request.url)
+        cookie = solver.goto(
+            request.url,
+            headers=request.headers,
+            method=request.method,
+            data=request.data,
+            json=request.json_data
+        )
         return {
             "status": "success",
             "cookies": cookie
