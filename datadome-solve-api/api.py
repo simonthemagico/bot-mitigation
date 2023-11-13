@@ -1,17 +1,26 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import subprocess
 import os
 import asyncio
 import json
 import hashlib
 import os
-import urllib
 from pydantic import BaseModel
+import time
 
 app = FastAPI()
 
 class CreateTaskRequest(BaseModel):
     captchaUrl: str
+    host: str
+    port: int
+
+# "/Users/administrator/.gologin/browser/orbita-browser-118/Orbita-Browser.app/Contents/MacOS/Orbita --user-data-dir=/tmp/gologin_b3aca92c79/profiles/655208c87e736c4718ccde8e --disable-encryption --donut-pie=undefined --font-masking-mode=2 --load-extension=/Users/administrator/.gologin/extensions/cookies-ext/655208c87e736c4718ccde8e,/Users/administrator/.gologin/extensions/passwords-ext/655208c87e736c4718ccde8e --proxy-server=http://fr.smartproxy.com:40001 --host-resolver-rules=MAP * 0.0.0.0 , EXCLUDE fr.smartproxy.com --lang=en-US"
+CHROME_PATH = "/Users/administrator/.gologin/browser/orbita-browser-118/Orbita-Browser.app/Contents/MacOS/Orbita"
+PROFILE_DIR = "/Users/administrator/Downloads/655208c87e736c4718ccde8e"
+EXTENSION_PATH = "/Users/administrator/Downloads/Projects/xhr-response-saver"
+RESPONSES_PATH = "/Users/administrator/Downloads/Responses/"
+TIMEOUT_IN_MINUTES = 1
 
 def write_start_url(start_url: str, profile_dir: str):
     preferences_path = f"{profile_dir}/Default/Preferences"
@@ -27,32 +36,42 @@ def write_start_url(start_url: str, profile_dir: str):
 
 @app.post("/v1/createTask")
 async def create_task(createTaskRequest: CreateTaskRequest):
+    # proxy host, port
+    proxy_host = createTaskRequest.host
+    proxy_port = createTaskRequest.port
+
     captcha_url = createTaskRequest.captchaUrl
     # Convert the captcha URL using the hashCode function
     hash_code = sha256_hash(captcha_url)
     # Write captcha url as start url
-    profile_dir = "C:\\Users\\Administrator\\AppData\\Local\\Temp\\GoLogin\\profiles\\test_copy"
-    write_start_url(captcha_url, profile_dir)
+    write_start_url(captcha_url, PROFILE_DIR)
     
     # Launch the browser with the provided command
-    browser_command = [
-        "C:\\Users\\Administrator\\.gologin\\browser\\orbita-browser-118\\chrome.exe",
-        f"--user-data-dir={profile_dir}",
+    command = [
+        CHROME_PATH,
+        f"--user-data-dir={PROFILE_DIR}",
         "--disable-encryption",
         "--donut-pie=undefined",
         "--font-masking-mode=2",
-        "--load-extension=C:\\Users\\Administrator\\.gologin\\extensions\\cookies-ext\\654cc90e5617ed7916d4db05,C:\\Users\\Administrator\\.gologin\\extensions\\passwords-ext\\654cc90e5617ed7916d4db05,C:\\Users\\Administrator\\Documents\\xhr-response-saver",
-        "--proxy-server=http://fr.smartproxy.com:40001",
+        f"--load-extension=/Users/administrator/.gologin/extensions/cookies-ext/655208c87e736c4718ccde8e,/Users/administrator/.gologin/extensions/passwords-ext/655208c87e736c4718ccde8e,{EXTENSION_PATH}",
+        f"--proxy-server=http://{proxy_host}:{proxy_port}"
         "--host-resolver-rules=MAP * 0.0.0.0 , EXCLUDE fr.smartproxy.com",
-        "--lang=fr-FR"
+        "--lang=en-US"
     ]
-    p = subprocess.Popen(browser_command, start_new_session=True)
+    p = subprocess.Popen(command, start_new_session=True)
 
     # Wait for the response file
-    response_file = f"C:\\Users\\Administrator\\Downloads\\response_{hash_code}.json"
+    response_file = RESPONSES_PATH + "response_" + hash_code + ".json"
+    # Check time
+    start_time = time.time()
     while not os.path.exists(response_file):
         print(f"Waiting: {hash_code}")
         await asyncio.sleep(1)  # Check for file every second
+        if time.time() - start_time > TIMEOUT_IN_MINUTES * 60:
+            p.terminate()
+            raise HTTPException(status_code=408, detail="Timeout")
+
+    print(f"Found: {hash_code}")
 
     # Read and return the JSON response
     with open(response_file, 'r') as file:

@@ -1,3 +1,5 @@
+let refererUrl = ''; // Global variable to store referer
+
 // SHA-256 hash function
 async function sha256_hash(s) {
     const msgBuffer = new TextEncoder().encode(s); // encode as UTF-8
@@ -18,7 +20,9 @@ chrome.webRequest.onCompleted.addListener(
 
         if (details.url.includes('https://geo.captcha-delivery.com/captcha/check')) {
             processResponse(details);
-        } else if (details.url.includes('https://geo.captcha-delivery.com/captcha/?initialCid')) {
+        }
+        
+        if (details.url.includes('https://geo.captcha-delivery.com/captcha/?initialCid')) {
             capturePreloadImages(details);
         }
     },
@@ -27,8 +31,15 @@ chrome.webRequest.onCompleted.addListener(
 );
 
 function processResponse(details) {
-    fetch(details.url)
-        .then(response => handleResponse(response, details.tabId))
+    // Modify URL to include parent_url
+    let modifiedUrl = new URL(details.url);
+    console.log(`Search params: ${modifiedUrl.searchParams}`)
+    modifiedUrl.searchParams.set('parent_url', refererUrl);
+
+    console.log('Modified URL:', modifiedUrl);
+    
+    fetch(modifiedUrl)
+        .then(response => handleResponse(response, details.tabId, modifiedUrl))
         .catch(handleError);
 }
 
@@ -40,6 +51,28 @@ function capturePreloadImages(details) {
     }, (results) => {
         if (chrome.runtime.lastError || !results || results.length === 0) {
             console.error('Error in fetching preload image URLs: ', chrome.runtime.lastError);
+
+            // Write error to responses file that it is blocked
+            const downloadContent = {
+                "url": details.url,
+                "body": "Preload images blocked"
+            }
+
+            const hashedFilename = `response_${sha256_hash(details.url)}.json`;
+            const blob = new Blob([JSON.stringify(downloadContent, null, 2)], { type: 'application/json' });
+            const reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    chrome.downloads.download({
+                        url: reader.result,
+                        filename: `Responses/${hashedFilename}`
+                    });
+                } catch (error) {
+                    console.error('Error triggering the download: ', error);
+                }
+            };
+            reader.readAsDataURL(blob);
+            
             return;
         }
 
@@ -58,6 +91,12 @@ function capturePreloadImages(details) {
             console.error('Background image or piece image not found');
         }
     });
+
+    // Extract referer from URL
+    const urlParams = new URLSearchParams(new URL(details.url).search);
+    refererUrl = urlParams.get('referer');
+
+    console.log('Referer URL:', refererUrl);
 }
 
 function solvePuzzle(bgImageUrl, pieceImageUrl, tabId) {
@@ -82,7 +121,7 @@ function solvePuzzle(bgImageUrl, pieceImageUrl, tabId) {
         });
 }
 
-function handleResponse(response, tabId) {
+function handleResponse(response, tabId, modifiedUrl) {
     if (!response.ok) {
         throw new Error(`Network response was not ok: ${response.statusText}`);
     }
@@ -93,21 +132,25 @@ function handleResponse(response, tabId) {
         }
         const tabUrl = tab.url;
         console.log('Tab URL:', tabUrl);
-        response.text().then(text => initiateDownload(text, tabUrl));
+        response.text().then(text => initiateDownload(text, tabUrl, modifiedUrl));
     });
 }
 
 // Modified initiateDownload function to use sha256_hash
-async function initiateDownload(text, tabUrl) {
+async function initiateDownload(text, tabUrl, modifiedUrl) {
     console.log('Response text:', text);
+    const downloadContent = {
+        "url": modifiedUrl,
+        "body": JSON.parse(text)
+    }
     const hashedFilename = `response_${await sha256_hash(tabUrl)}.json`;
-    const blob = new Blob([text], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(downloadContent, null, 2)], { type: 'application/json' });
     const reader = new FileReader();
     reader.onload = function () {
         try {
             chrome.downloads.download({
                 url: reader.result,
-                filename: hashedFilename
+                filename: `Responses/${hashedFilename}`
             });
         } catch (error) {
             console.error('Error triggering the download: ', error);
