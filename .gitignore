@@ -1,2 +1,4 @@
 __pycache__
 .cloudflared
+datadome-solve-api/fingerprints/*
+!datadome-solve-api/fingerprints/.keep
