@@ -43,12 +43,31 @@ function processResponse(details) {
         .catch(handleError);
 }
 
+async function downloadToDisk(downloadContent, url) {
+    const blob = new Blob([JSON.stringify(downloadContent, null, 2)], { type: 'application/json' });
+    const reader = new FileReader();
+    // hash
+    const hashedUrl = await sha256_hash(url);
+    reader.onload = function () {
+        try {
+            chrome.downloads.download({
+                url: reader.result,
+                filename: `Responses/response_${hashedUrl}.json`,
+            });
+        } catch (error) {
+            console.error('Error triggering the download: ', error);
+        }
+    };
+    reader.readAsDataURL(blob);
+}
+
 // New function to capture preload images
-function capturePreloadImages(details) {
+async function capturePreloadImages(details) {
     chrome.scripting.executeScript({
         target: { tabId: details.tabId },
         function: () => Array.from(document.querySelectorAll('link[rel="preload"]')).map(link => link.href)
-    }, (results) => {
+    }, async (results) => { // Added async here
+        console.log(results);
         if (chrome.runtime.lastError || !results || results.length === 0) {
             console.error('Error in fetching preload image URLs: ', chrome.runtime.lastError);
 
@@ -57,21 +76,7 @@ function capturePreloadImages(details) {
                 "url": details.url,
                 "body": "Preload images blocked"
             }
-
-            const hashedFilename = `response_${sha256_hash(details.url)}.json`;
-            const blob = new Blob([JSON.stringify(downloadContent, null, 2)], { type: 'application/json' });
-            const reader = new FileReader();
-            reader.onload = function () {
-                try {
-                    chrome.downloads.download({
-                        url: reader.result,
-                        filename: `Responses/${hashedFilename}`
-                    });
-                } catch (error) {
-                    console.error('Error triggering the download: ', error);
-                }
-            };
-            reader.readAsDataURL(blob);
+            await downloadToDisk(downloadContent, details.url);
             
             return;
         }
@@ -89,6 +94,12 @@ function capturePreloadImages(details) {
             solvePuzzle(bgImageUrl, pieceImageUrl, details.tabId);
         } else {
             console.error('Background image or piece image not found');
+            // Blocked
+            const downloadContent = {
+                "url": details.url,
+                "body": "Ip blocked"
+            }
+            await downloadToDisk(downloadContent, details.url);
         }
     });
 
@@ -143,20 +154,7 @@ async function initiateDownload(text, tabUrl, modifiedUrl) {
         "url": modifiedUrl,
         "body": JSON.parse(text)
     }
-    const hashedFilename = `response_${await sha256_hash(tabUrl)}.json`;
-    const blob = new Blob([JSON.stringify(downloadContent, null, 2)], { type: 'application/json' });
-    const reader = new FileReader();
-    reader.onload = function () {
-        try {
-            chrome.downloads.download({
-                url: reader.result,
-                filename: `Responses/${hashedFilename}`
-            });
-        } catch (error) {
-            console.error('Error triggering the download: ', error);
-        }
-    };
-    reader.readAsDataURL(blob);
+    await downloadToDisk(downloadContent, tabUrl);
 }
 
 function handleError(error) {
