@@ -7,6 +7,9 @@ import hashlib
 import os
 from pydantic import BaseModel
 import time
+from pyvirtualdisplay import Display
+import shutil
+import random
 
 app = FastAPI()
 
@@ -21,12 +24,28 @@ PROFILE_DIR = "/Users/administrator/Downloads/655208c87e736c4718ccde8e"
 EXTENSION_PATH = "/Users/administrator/Downloads/Projects/xhr-response-saver"
 RESPONSES_PATH = "/Users/administrator/Downloads/Responses/"
 TIMEOUT_IN_MINUTES = 1
+PROCESSING_URLS = set()
 
-def write_start_url(start_url: str, profile_dir: str):
+class MockP(object):
+    def terminate(self):
+        print("Terminated")
+
+def get_random_fingerprint():
+    fingerprints_path = os.path.join(os.path.dirname(__file__), "fingerprints")
+    fingerprints = os.listdir(fingerprints_path)
+
+    fingerprint = random.choice(fingerprints)
+    fingerprint_path = os.path.join(fingerprints_path, fingerprint)
+
+    with open(fingerprint_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def write_preferences(profile_dir: str, start_url: str, fingerprint: dict):
     preferences_path = f"{profile_dir}/Default/Preferences"
 
     with open(os.path.join(os.path.dirname(__file__), "files/Preferences"), "r", encoding="utf-8") as f:
         preferences = json.load(f)
+        preferences["gologin"].update(fingerprint)
         preferences["gologin"]["startupUrl"] = start_url
         preferences["gologin"]["startup_urls"] = [start_url]
 
@@ -43,44 +62,67 @@ async def create_task(createTaskRequest: CreateTaskRequest):
     captcha_url = createTaskRequest.captchaUrl
     # Convert the captcha URL using the hashCode function
     hash_code = sha256_hash(captcha_url)
+    # Copy directory to a temp directory
+    subprocess.run(["cp", "-r", PROFILE_DIR, f"/tmp/{hash_code}"])
+    TEMP_PROFILE_DIR = f"/tmp/{hash_code}"
+
+    # Get a random fingerprint json file from `fingerprints`
+    fingerprint = get_random_fingerprint()
+
     # Write captcha url as start url
-    write_start_url(captcha_url, PROFILE_DIR)
+    write_preferences(TEMP_PROFILE_DIR, start_url=captcha_url, fingerprint=fingerprint)
     
     # Launch the browser with the provided command
     command = [
         CHROME_PATH,
-        f"--user-data-dir={PROFILE_DIR}",
+        f"--user-data-dir={TEMP_PROFILE_DIR}",
         "--disable-encryption",
         "--donut-pie=undefined",
         "--font-masking-mode=2",
         f"--load-extension=/Users/administrator/.gologin/extensions/cookies-ext/655208c87e736c4718ccde8e,/Users/administrator/.gologin/extensions/passwords-ext/655208c87e736c4718ccde8e,{EXTENSION_PATH}",
-        f"--proxy-server=http://{proxy_host}:{proxy_port}"
-        "--host-resolver-rules=MAP * 0.0.0.0 , EXCLUDE fr.smartproxy.com",
+        f"--proxy-server=http://{proxy_host}:{proxy_port}",
+        f"--host-resolver-rules=MAP * 0.0.0.0 , EXCLUDE {proxy_host}",
         "--lang=en-US"
     ]
-    p = subprocess.Popen(command, start_new_session=True)
+    with Display(visible=False) as display:
+        if captcha_url not in PROCESSING_URLS:
+            p = subprocess.Popen(command, start_new_session=True)
+            PROCESSING_URLS.add(captcha_url)
+        else:
+            p = MockP()
 
-    # Wait for the response file
-    response_file = RESPONSES_PATH + "response_" + hash_code + ".json"
-    # Check time
-    start_time = time.time()
-    while not os.path.exists(response_file):
-        print(f"Waiting: {hash_code}")
-        await asyncio.sleep(1)  # Check for file every second
-        if time.time() - start_time > TIMEOUT_IN_MINUTES * 60:
+        try:
+            # Wait for the response file
+            response_file = RESPONSES_PATH + "response_" + hash_code + ".json"
+            # Check time
+            start_time = time.time()
+            while not os.path.exists(response_file):
+                print(f"Waiting: {hash_code}")
+                await asyncio.sleep(1)  # Check for file every second
+                if time.time() - start_time > TIMEOUT_IN_MINUTES * 60:
+                    print(f"Timeout: {createTaskRequest.__dict__}")
+                    p.terminate()
+                    raise HTTPException(status_code=408, detail="Timeout")
+
+            print(f"Found: {hash_code}")
+
+            # Read and return the JSON response
+            with open(response_file, 'r') as file:
+                response_data = json.load(file)
+
+            # Close the browser
             p.terminate()
-            raise HTTPException(status_code=408, detail="Timeout")
 
-    print(f"Found: {hash_code}")
+            response_data['navigator'] = fingerprint['navigator']
 
-    # Read and return the JSON response
-    with open(response_file, 'r') as file:
-        response_data = json.load(file)
-
-    # Close the browser
-    p.terminate()
-
-    return response_data
+            return response_data
+        finally:
+            # Wait for 1 second to close the browser
+            await asyncio.sleep(1)
+            # Remove the temp directory
+            shutil.rmtree(TEMP_PROFILE_DIR)
+            # Remove the captcha url from the processing urls
+            PROCESSING_URLS.remove(captcha_url)
 
 def sha256_hash(s):
     return hashlib.sha256(s.encode()).hexdigest()
