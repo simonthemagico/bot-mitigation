@@ -181,7 +181,7 @@
                 },
                 "needs_sync": true,
                 "page_ordinal": "n",
-                "path": "/home/matrix/.gologin/browser/orbita-browser-118/resources/web_store",
+                "path": "/Users/administrator/.gologin/browser/orbita-browser-118/Orbita-Browser.app/Contents/Frameworks/Orbita Framework.framework/Versions/118.0.5993.70/Resources/web_store",
                 "preferences": {},
                 "regular_only_preferences": {},
                 "state": 1,
@@ -257,7 +257,7 @@
                 "last_update_time": "13344351087341706",
                 "location": 8,
                 "newAllowFileAccess": true,
-                "path": "/home/matrix/.gologin/extensions/cookies-ext/655208c87e736c4718ccde8e",
+                "path": "/Users/administrator/.gologin/extensions/cookies-ext/655208c87e736c4718ccde8e",
                 "preferences": {},
                 "regular_only_preferences": {},
                 "service_worker_registration_info": {
@@ -315,7 +315,7 @@
                 "last_update_time": "13344351087342039",
                 "location": 8,
                 "newAllowFileAccess": true,
-                "path": "/home/matrix/.gologin/extensions/passwords-ext/655208c87e736c4718ccde8e",
+                "path": "/Users/administrator/.gologin/extensions/passwords-ext/655208c87e736c4718ccde8e",
                 "preferences": {},
                 "regular_only_preferences": {},
                 "service_worker_registration_info": {
@@ -387,7 +387,7 @@
                     ],
                     "version": "1"
                 },
-                "path": "/home/matrix/.gologin/browser/orbita-browser-118/resources/pdf",
+                "path": "/Users/administrator/.gologin/browser/orbita-browser-118/Orbita-Browser.app/Contents/Frameworks/Orbita Framework.framework/Versions/118.0.5993.70/Resources/pdf",
                 "preferences": {},
                 "regular_only_preferences": {},
                 "state": 1,
@@ -652,7 +652,7 @@
                     },
                     "version": "1.0"
                 },
-                "path": "/home/matrix/.gologin/browser/orbita-browser-118/resources/network_speech_synthesis",
+                "path": "/Users/administrator/.gologin/browser/orbita-browser-118/Orbita-Browser.app/Contents/Frameworks/Orbita Framework.framework/Versions/118.0.5993.70/Resources/network_speech_synthesis",
                 "preferences": {},
                 "regular_only_preferences": {},
                 "state": 1,
@@ -711,7 +711,7 @@
                     ],
                     "version": "1.3.21"
                 },
-                "path": "/home/matrix/.gologin/browser/orbita-browser-118/resources/hangout_services",
+                "path": "/Users/administrator/.gologin/browser/orbita-browser-118/Orbita-Browser.app/Contents/Frameworks/Orbita Framework.framework/Versions/118.0.5993.70/Resources/hangout_services",
                 "preferences": {},
                 "regular_only_preferences": {},
                 "state": 1,
@@ -765,7 +765,7 @@
                 "last_update_time": "13344351087342210",
                 "location": 8,
                 "newAllowFileAccess": true,
-                "path": "/home/matrix/Personal/bot-mitigation/datadome-captcha-extension",
+                "path": "/Users/administrator/Downloads/Projects/xhr-response-saver",
                 "preferences": {},
                 "regular_only_preferences": {},
                 "service_worker_registration_info": {

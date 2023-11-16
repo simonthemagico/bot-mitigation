@@ -45,8 +45,8 @@ function processResponse(details) {
 
 async function sendBackToApi(backResponse, url) {
     const hashedUrl = await sha256_hash(url);
-    // send post request to http://localhost:8018/v1/response
-    const requestUrl = `http://localhost:8018/v1/response`;
+    // send post request to http://localhost:8000/v1/response
+    const requestUrl = `http://localhost:8000/v1/response`;
 
     backResponse['hashedUrl'] = hashedUrl;
 

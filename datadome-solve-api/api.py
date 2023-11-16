@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 import subprocess
 import os
@@ -23,11 +24,14 @@ EXTENSION_PATH = os.getenv("EXTENSION_PATH")
 RESPONSES_PATH = os.getenv("RESPONSES_PATH")
 PREFERENCES_PATH = os.getenv("PREFERENCES_PATH")
 USE_DISPLAY = os.getenv("USE_DISPLAY", "false").lower() == "true"
+API_PORT = int(os.getenv("API_PORT", 8000))
 
 class CreateTaskRequest(BaseModel):
     captchaUrl: str
     host: str
     port: int
+    username: Optional[str] = "user-sp0e9f6467-sessionduration-30"
+    password: Optional[str] = "EWXv1a50bXfxc3vnsw"
 
 TIMEOUT_IN_MINUTES = 1
 PROCESSING_URLS = set()
@@ -47,7 +51,7 @@ def get_random_fingerprint():
     with open(fingerprint_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def write_preferences(profile_dir: str, start_url: str, fingerprint: dict):
+def write_preferences(profile_dir: str, start_url: str, fingerprint: dict, create_task_request: CreateTaskRequest):
     preferences_path = f"{profile_dir}/Default/Preferences"
 
     with open(os.path.join(os.path.dirname(__file__), PREFERENCES_PATH), "r", encoding="utf-8") as f:
@@ -56,18 +60,8 @@ def write_preferences(profile_dir: str, start_url: str, fingerprint: dict):
         preferences["gologin"]["startupUrl"] = start_url
         preferences["gologin"]["startup_urls"] = [start_url]
 
-        # Generate random noise
-        # gologin/audioContext/noiseValue - 6.213282708857e-8 (random)
-        # gologin/canvasNoise - 0-5
-        # gologin/getClientRectsNoice - 5-10 (same)
-        # gologin/get_client_rects_noise - 5-10 
-        # gologin/webglNoiseValue - 80-90
-
-        # preferences["gologin"]["audioContext"]["noiseValue"] = eval(f"{random.randint(0, 10 * 10000) / 10000}e-8")
-        # preferences["gologin"]["canvasNoise"] = random.randint(0, 5 * 10000) / 10000
-        # preferences["gologin"]["getClientRectsNoise"] = random.randint(5 * 10000, 10 * 10000) / 10000
-        # preferences["gologin"]["get_client_rects_noise"] = preferences["gologin"]["getClientRectsNoise"]
-        # preferences["gologin"]["webglNoiseValue"] = random.randint(80 * 10000, 90 * 10000) / 10000
+        preferences["gologin"]["proxy"]["username"] = create_task_request.username
+        preferences["gologin"]["proxy"]["password"] = create_task_request.password
 
     # Write this in preferences_path
     with open(preferences_path, "w", encoding="utf-8") as f:
@@ -93,7 +87,7 @@ async def create_task(createTaskRequest: CreateTaskRequest):
     fingerprint = get_random_fingerprint()
 
     # Write captcha url as start url
-    write_preferences(TEMP_PROFILE_DIR, start_url=captcha_url, fingerprint=fingerprint)
+    write_preferences(TEMP_PROFILE_DIR, start_url=captcha_url, fingerprint=fingerprint, create_task_request=createTaskRequest)
     
     # Launch the browser with the provided command
     command = [
@@ -171,4 +165,4 @@ def sha256_hash(s):
 
 if __name__=="__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8018)
+    uvicorn.run(app, host="0.0.0.0", port=API_PORT)
