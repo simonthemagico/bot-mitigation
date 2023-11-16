@@ -21,7 +21,7 @@ function slideSliderbg(x) {
         // Simulate a more realistic mouse move
         let currentX = startX;
         let endX = startX + x + extraX; // Add extra to account for the slider width
-        let steps = 10; // Number of steps in the drag
+        let steps = 20;
         let interval = 20; // Milliseconds between each step
 
         let moveSlider = setInterval(() => {

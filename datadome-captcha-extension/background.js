@@ -43,22 +43,27 @@ function processResponse(details) {
         .catch(handleError);
 }
 
-async function downloadToDisk(downloadContent, url) {
-    const blob = new Blob([JSON.stringify(downloadContent, null, 2)], { type: 'application/json' });
-    const reader = new FileReader();
-    // hash
+async function sendBackToApi(backResponse, url) {
     const hashedUrl = await sha256_hash(url);
-    reader.onload = function () {
-        try {
-            chrome.downloads.download({
-                url: reader.result,
-                filename: `Responses/response_${hashedUrl}.json`,
-            });
-        } catch (error) {
-            console.error('Error triggering the download: ', error);
-        }
-    };
-    reader.readAsDataURL(blob);
+    // send post request to http://localhost:8018/v1/response
+    const requestUrl = `http://localhost:8018/v1/response`;
+
+    backResponse['hashedUrl'] = hashedUrl;
+
+    fetch(requestUrl, {
+        method: 'POST',
+        body: JSON.stringify(backResponse),
+        headers: { 'Content-Type': 'application/json' }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.statusText}`);
+            }
+            console.log('Response sent to API');
+        })
+        .catch(error => {
+            console.error('Error sending response to API: ', error);
+        });
 }
 
 // New function to capture preload images
@@ -72,11 +77,11 @@ async function capturePreloadImages(details) {
             console.error('Error in fetching preload image URLs: ', chrome.runtime.lastError);
 
             // Write error to responses file that it is blocked
-            const downloadContent = {
+            const backResponse = {
                 "url": details.url,
                 "body": "Preload images blocked"
             }
-            await downloadToDisk(downloadContent, details.url);
+            await sendBackToApi(backResponse, details.url);
             
             return;
         }
@@ -95,11 +100,11 @@ async function capturePreloadImages(details) {
         } else {
             console.error('Background image or piece image not found');
             // Blocked
-            const downloadContent = {
+            const backResponse = {
                 "url": details.url,
                 "body": "Ip blocked"
             }
-            await downloadToDisk(downloadContent, details.url);
+            await sendBackToApi(backResponse, details.url);
         }
     });
 
@@ -150,11 +155,11 @@ function handleResponse(response, tabId, modifiedUrl) {
 // Modified initiateDownload function to use sha256_hash
 async function initiateDownload(text, tabUrl, modifiedUrl) {
     console.log('Response text:', text);
-    const downloadContent = {
+    const backResponse = {
         "url": modifiedUrl,
         "body": JSON.parse(text)
     }
-    await downloadToDisk(downloadContent, tabUrl);
+    await sendBackToApi(backResponse, tabUrl);
 }
 
 function handleError(error) {
