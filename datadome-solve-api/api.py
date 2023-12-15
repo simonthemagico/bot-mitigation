@@ -36,6 +36,8 @@ class CreateTaskRequest(BaseModel):
 TIMEOUT_IN_MINUTES = 1
 PROCESSING_URLS = set()
 RESPONSES = {}
+MAX_BROWSERS = 15  # Maximum number of browsers that can be opened at a time
+semaphore = asyncio.Semaphore(MAX_BROWSERS)
 
 class MockP(object):
     def terminate(self):
@@ -72,81 +74,83 @@ def check_response_exists(hash_code: str):
 
 @app.post("/v1/createTask")
 async def create_task(createTaskRequest: CreateTaskRequest):
-    # proxy host, port
-    proxy_host = createTaskRequest.host
-    proxy_port = createTaskRequest.port
+    async with semaphore:
+        # proxy host, port
+        proxy_host = createTaskRequest.host
+        proxy_port = createTaskRequest.port
 
-    captcha_url = createTaskRequest.captchaUrl
-    # Convert the captcha URL using the hashCode function
-    hash_code = sha256_hash(captcha_url)
-    # Copy directory to a temp directory
-    subprocess.run(["cp", "-r", PROFILE_DIR, f"/tmp/{hash_code}"])
-    TEMP_PROFILE_DIR = f"/tmp/{hash_code}"
+        captcha_url = createTaskRequest.captchaUrl
+        # Convert the captcha URL using the hashCode function
+        hash_code = sha256_hash(captcha_url)
+        # Copy directory to a temp directory
+        subprocess.run(["cp", "-r", PROFILE_DIR, f"/tmp/{hash_code}"])
+        TEMP_PROFILE_DIR = f"/tmp/{hash_code}"
 
-    # Get a random fingerprint json file from `fingerprints`
-    fingerprint = get_random_fingerprint()
+        # Get a random fingerprint json file from `fingerprints`
+        fingerprint = get_random_fingerprint()
 
-    # Write captcha url as start url
-    write_preferences(TEMP_PROFILE_DIR, start_url=captcha_url, fingerprint=fingerprint, create_task_request=createTaskRequest)
-    
-    # Launch the browser with the provided command
-    command = [
-        CHROME_PATH,
-        f"--user-data-dir={TEMP_PROFILE_DIR}",
-        "--disable-encryption",
-        "--donut-pie=undefined",
-        "--font-masking-mode=2",
-        f"--load-extension={EXTENSION_PATH}",
-        f"--proxy-server=http://{proxy_host}:{proxy_port}",
-        f"--host-resolver-rules=MAP * 0.0.0.0 , EXCLUDE {proxy_host}",
-        "--lang=en-US"
-    ]
-    async def process():
-        if captcha_url not in PROCESSING_URLS:
-            p = subprocess.Popen(command, start_new_session=True)
-            PROCESSING_URLS.add(captcha_url)
-        else:
-            p = MockP()
+        # Write captcha url as start url
+        write_preferences(TEMP_PROFILE_DIR, start_url=captcha_url, fingerprint=fingerprint, create_task_request=createTaskRequest)
+        
+        EXTENSION_PATH = "/Users/administrator/Downloads/Projects/xhr-response-saver"
+        # Launch the browser with the provided command
+        command = [
+            CHROME_PATH,
+            f"--user-data-dir={TEMP_PROFILE_DIR}",
+            "--disable-encryption",
+            "--donut-pie=undefined",
+            "--font-masking-mode=2",
+            f"--load-extension=/Users/administrator/.gologin/extensions/cookies-ext/655208c87e736c4718ccde8e,/Users/administrator/.gologin/extensions/passwords-ext/655208c87e736c4718ccde8e,{EXTENSION_PATH}",
+            f"--proxy-server=http://{proxy_host}:{proxy_port}",
+            f"--host-resolver-rules=MAP * 0.0.0.0 , EXCLUDE {proxy_host}",
+            "--lang=en-US"
+        ]
+        async def process():
+            if captcha_url not in PROCESSING_URLS:
+                p = subprocess.Popen(command, start_new_session=True)
+                PROCESSING_URLS.add(captcha_url)
+            else:
+                p = MockP()
 
-        try:
-            # Check time
-            start_time = time.time()
-            while check_response_exists(hash_code) is False:
-                print(f"Waiting: {hash_code}")
-                await asyncio.sleep(1)  # Check for file every second
-                # If process is not alive, raise stop
-                if p.poll() is not None:
-                    print(f"Process not alive: {createTaskRequest.__dict__}")
-                    raise HTTPException(status_code=408, detail="Stopped")
-                if time.time() - start_time > TIMEOUT_IN_MINUTES * 60:
-                    print(f"Timeout: {createTaskRequest.__dict__}")
-                    p.terminate()
-                    raise HTTPException(status_code=408, detail="Timeout")
+            try:
+                # Check time
+                start_time = time.time()
+                while check_response_exists(hash_code) is False:
+                    print(f"Waiting: {hash_code}")
+                    await asyncio.sleep(1)  # Check for file every second
+                    # If process is not alive, raise stop
+                    if p.poll() is not None:
+                        print(f"Process not alive: {createTaskRequest.__dict__}")
+                        raise HTTPException(status_code=408, detail="Stopped")
+                    if time.time() - start_time > TIMEOUT_IN_MINUTES * 60:
+                        print(f"Timeout: {createTaskRequest.__dict__}")
+                        p.terminate()
+                        raise HTTPException(status_code=408, detail="Timeout")
 
-            print(f"Found: {hash_code}")
+                print(f"Found: {hash_code}")
 
-            # Read and return the JSON response
-            response_data = RESPONSES[hash_code]
+                # Read and return the JSON response
+                response_data = RESPONSES[hash_code]
 
-            # Close the browser
-            p.terminate()
+                # Close the browser
+                p.terminate()
 
-            response_data['navigator'] = fingerprint['navigator']
+                response_data['navigator'] = fingerprint['navigator']
 
-            return response_data
-        finally:
-            # Wait for 1 second to close the browser
-            await asyncio.sleep(1)
-            # Remove the temp directory
-            shutil.rmtree(TEMP_PROFILE_DIR)
-            # Remove the captcha url from the processing urls
-            PROCESSING_URLS.remove(captcha_url)
+                return response_data
+            finally:
+                # Wait for 1 second to close the browser
+                await asyncio.sleep(1)
+                # Remove the temp directory
+                shutil.rmtree(TEMP_PROFILE_DIR)
+                # Remove the captcha url from the processing urls
+                PROCESSING_URLS.remove(captcha_url)
 
-    if USE_DISPLAY:
-        with Display(visible=False):
-            return await process()
+        if USE_DISPLAY:
+            with Display(visible=False):
+                return await process()
 
-    return await process()
+        return await process()
 
 # Post route to receive the response
 @app.post("/v1/response")

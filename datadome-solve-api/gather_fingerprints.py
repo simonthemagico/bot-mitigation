@@ -29,7 +29,7 @@ params = {
     'template': '655208c8bfa76b8683346f7c',
 }
 
-for _ in range(200):
+for _ in range(40):
     response = requests.get('https://api.gologin.com/browser/fingerprint', params=params, headers=headers)
 
     random_hash = secrets.token_hex(8)
@@ -39,4 +39,4 @@ for _ in range(200):
         json.dump(response.json(), f, indent=2)
 
     print(f"Saved: {fingerprint_path}")
-    # time.sleep(1)
+    time.sleep(1)
