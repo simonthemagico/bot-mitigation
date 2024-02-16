@@ -32,6 +32,7 @@ class CreateTaskRequest(BaseModel):
     port: int
     username: Optional[str] = "user-sp0e9f6467-sessionduration-30"
     password: Optional[str] = "EWXv1a50bXfxc3vnsw"
+    userAgent: Optional[str]
 
 TIMEOUT_IN_MINUTES = 1
 PROCESSING_URLS = set()
@@ -78,6 +79,7 @@ async def create_task(createTaskRequest: CreateTaskRequest):
         # proxy host, port
         proxy_host = createTaskRequest.host
         proxy_port = createTaskRequest.port
+        user_agent = createTaskRequest.userAgent
 
         captcha_url = createTaskRequest.captchaUrl
         # Convert the captcha URL using the hashCode function
@@ -88,10 +90,13 @@ async def create_task(createTaskRequest: CreateTaskRequest):
 
         # Get a random fingerprint json file from `fingerprints`
         fingerprint = get_random_fingerprint()
+        if user_agent:
+            fingerprint['navigator']['userAgent'] = user_agent
+
 
         # Write captcha url as start url
         write_preferences(TEMP_PROFILE_DIR, start_url=captcha_url, fingerprint=fingerprint, create_task_request=createTaskRequest)
-        
+
         EXTENSION_PATH = "/Users/administrator/Downloads/Projects/xhr-response-saver"
         # Launch the browser with the provided command
         command = [
