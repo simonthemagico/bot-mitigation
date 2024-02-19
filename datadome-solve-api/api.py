@@ -32,7 +32,7 @@ class CreateTaskRequest(BaseModel):
     port: int
     username: Optional[str] = "user-sp0e9f6467-sessionduration-30"
     password: Optional[str] = "EWXv1a50bXfxc3vnsw"
-    userAgent: Optional[str]
+    userAgent: Optional[str] = None
 
 TIMEOUT_IN_MINUTES = 1
 PROCESSING_URLS = set()
