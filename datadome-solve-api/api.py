@@ -5,7 +5,7 @@ import os
 import asyncio
 import json
 import hashlib
-import os
+import re
 from pydantic import BaseModel
 import time
 from pyvirtualdisplay import Display
@@ -52,7 +52,18 @@ def get_random_fingerprint():
     fingerprint_path = os.path.join(fingerprints_path, fingerprint)
 
     with open(fingerprint_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        fingerprint_data = json.load(f)
+        user_agent = fingerprint_data["navigator"]["userAgent"]
+        # randomize the user agent chrome version
+        major = random.randint(110, 120)
+        minor = random.randint(0, 9)
+        build = random.randint(0, 600)
+        patch = random.randint(0, 200)
+
+        random_version = f"{major}.{minor}.{build}.{patch}"
+        user_agent = re.sub(r"Chrome/[\d.]+", f"Chrome/{random_version}", user_agent)
+        fingerprint_data["navigator"]["userAgent"] = user_agent
+        return fingerprint_data
 
 def write_preferences(profile_dir: str, start_url: str, fingerprint: dict, create_task_request: CreateTaskRequest):
     preferences_path = f"{profile_dir}/Default/Preferences"
