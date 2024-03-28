@@ -8,6 +8,7 @@ chrome.runtime.onInstalled.addListener(() => {
     console.log('Extension installed and background service worker started.');
 });
 
+let state = 'idle';
 
 chrome.webRequest.onBeforeRequest.addListener(
     function(details) {
@@ -36,8 +37,14 @@ chrome.webRequest.onCompleted.addListener(
         if (!details.url.includes('captcha-delivery.com')) {
             return;
         }
+        if (details.url.includes('/captcha/check')) {
+            state = 'idle';
+            imageUrls = [];
+            frameIds = [];
+        }
         console.log('Request completed: ', details.url);
-        if (imageUrls.length === 2 && frameIds.length > 0) {
+        if (imageUrls.length === 2 && frameIds.length > 0 && state === 'idle') {
+            state = 'processing';
             console.log('Image urls: ', imageUrls);
             let bgImageUrl = imageUrls.find(url => !url.includes('.frag.'));
             let pieceImageUrl = imageUrls.find(url => url.includes('.frag.'));
