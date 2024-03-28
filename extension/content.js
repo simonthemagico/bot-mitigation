@@ -3,12 +3,13 @@ if (window !== window.top) {
     // The script is in an iframe
     // Listening for messages
     chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        console.log('Message received in content.js:', request);
         if (request.action === "slideSlider") {
             slideSliderbg(request.xCoord);
         }
     });
 
-    function slideSliderbg(x) {
+    function slideSliderbg(x, retries = 0) {
         let slider = document.querySelector('.slider');
         let extraX = x / 10;
 
@@ -46,7 +47,12 @@ if (window !== window.top) {
             }, interval);
 
         } else {
-            console.error('Slider element not found');
+            if (retries < 5) {
+                console.log('Sliderbg not found, retrying...');
+                setTimeout(() => slideSliderbg(x, retries + 1), 1000);
+            } else {
+                console.error('Sliderbg not found');
+            }
         }
     }
 

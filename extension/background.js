@@ -1,27 +1,13 @@
 // background.js
 let currentTab;
-chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 
-  if (changeInfo.status === 'complete' && /^https?:/.test(tab.url)) {
-        if (new URL(tab.url).hostname === 'leboncoin.fr') {
-            attachDebugger(tab.id);
-        }
-      chrome.scripting.executeScript({
-          target: {tabId: tabId, allFrames: true},
-          files: ['content.js']
-      }).then(() => {
-          console.log('Script injected successfully');
-      }).catch(error => console.error('Error injecting script:', error));
-  }
-});
-
+let imageUrls = [];
 
 // on install
 chrome.runtime.onInstalled.addListener(() => {
     console.log('Extension installed and background service worker started.');
 });
 
-// on request start, attach debugger
 
 chrome.webRequest.onBeforeRequest.addListener(
     function(details) {
@@ -31,12 +17,13 @@ chrome.webRequest.onBeforeRequest.addListener(
         if (!details.url.includes('captcha-delivery.com')) {
             return;
         }
-        console.log('Request started: ', details.url);
-        if (details.url.includes('https://geo.captcha-delivery.com/captcha/check')) {
-            
+        // save image urls in the global variable if ends with .png or .jpg
+        if (details.url.endsWith('.png') || details.url.endsWith('.jpg')) {
+            imageUrls.push(details.url);
         }
+        console.log('Request started: ', details.url);
     },
-    { urls: ["<all_urls>"], types: ["xmlhttprequest"] }
+    { urls: ["<all_urls>"] }
 );
 
 
@@ -50,71 +37,47 @@ chrome.webRequest.onCompleted.addListener(
             return;
         }
         console.log('Request completed: ', details.url);
-        if (details.url.includes('https://geo.captcha-delivery.com/captcha/?initialCid')) {
-            solveCaptcha(currentTab);
+        if (imageUrls.length === 2 && frameIds.length > 0) {
+            console.log('Image urls: ', imageUrls);
+            let bgImageUrl = imageUrls.find(url => !url.includes('.frag.'));
+            let pieceImageUrl = imageUrls.find(url => url.includes('.frag.'));
+            solvePuzzle(bgImageUrl, pieceImageUrl, details.tabId);
         }
     },
-    { urls: ["<all_urls>"], types: ["xmlhttprequest"] }
+    { urls: ["<all_urls>"]}
 );
 
 
-function attachDebugger(tabId) {
-    chrome.debugger.attach({ tabId: tabId }, '1.3', function() {
-        if (chrome.runtime.lastError) {
-            console.error(chrome.runtime.lastError.message);
-            return;
-        }
+let frameIds = []; // Store frameIds of interest
 
-        chrome.debugger.sendCommand({ tabId: tabId }, 'Network.enable');
-
-        chrome.debugger.onEvent.addListener((source, method, params) => {
-            if (source.tabId === tabId && method === 'Network.responseReceived') {
-                const requestUrl = params.response.url;
-                console.log('Response received:', requestUrl);
-                // Check if the URL ends with '/captcha/check'
-                if (requestUrl.endsWith('/captcha/check')) {
-                    // Fetch the response body
-                    chrome.debugger.sendCommand(
-                        { tabId: tabId },
-                        'Network.getResponseBody',
-                        { requestId: params.requestId },
-                        (response) => {
-                            if (!response.body) return; // No response body
-                            console.log('Captcha check response:', response.body);
-                            // Here you can send the response body to your extension's frontend or handle it as needed
-                        }
-                    );
-                }
-            }
-        });
-    });
-}
-
-
+chrome.webNavigation.onCommitted.addListener(details => {
+    if (details.frameId !== 0 && details.url.includes("captcha-delivery.com")) {
+        currentTab = details.tabId;
+        // Assuming iframes loading captcha-delivery.com content are of interest
+        frameIds.push({ tabId: details.tabId, frameId: details.frameId });
+    }
+}, { url: [{ urlMatches: 'captcha-delivery.com' }] });
 // get cookies from the response
 function getCookies(response) {
     console.log('Response: ', response);    
 }
-
-// solve captcha
-function solveCaptcha(tabId) {
-    chrome.scripting.executeScript({
-        target: { tabId },
-        function: () => Array.from(document.querySelectorAll('link[rel="preload"]')).map(link => link.href)
-    }, async (results) => { 
-        console.log(results);
-        let imageUrls = results[0].result;
-        console.log('Preload image URLs:', imageUrls);
-
-        let bgImageUrl = imageUrls.find(url => !url.includes('.frag.'));
-        let pieceImageUrl = imageUrls.find(url => url.includes('.frag.'));
-        solvePuzzle(bgImageUrl, pieceImageUrl, tabId);
-        
+function sendMessageToIframe(action, xCoord) {
+   // execute content.js script in all iframes
+   // and then send message to the iframe
+   chrome.scripting.executeScript({
+        target: { allFrames: true, tabId: currentTab },
+        files: ['content.js']
+    }).then(() => {
+        console.log('Script executed in all frames');
+        frameIds.forEach(frame => {
+            chrome.tabs.sendMessage(frame.tabId, {action, xCoord}, {frameId: frame.frameId});
+        });
     });
 }
 
 // solve puzzle
 function solvePuzzle(bgImageUrl, pieceImageUrl, tabId) {
+    console.log('Solving puzzle with bgImageUrl: ', bgImageUrl, ' and pieceImageUrl: ', pieceImageUrl);
     const url = `https://captcha.riseofninja.com/api/v1/puzzleSolver`;
     fetch(url, {
         method: 'POST',
@@ -128,7 +91,8 @@ function solvePuzzle(bgImageUrl, pieceImageUrl, tabId) {
     })
     .then(response =>  response.json())
     .then(data => {
-        chrome.tabs.sendMessage(tabId, {action: "slideSlider", xCoord: data.x});
+        console.log('Response from API: ', data);
+        sendMessageToIframe("slideSlider", data.x);
 
     })
     .catch(error => {
