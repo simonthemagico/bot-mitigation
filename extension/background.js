@@ -38,6 +38,15 @@ chrome.webRequest.onCompleted.addListener(
             return;
         }
         if (details.url.includes('/captcha/check')) {
+            // call localhost:8001/v1/response with the hash from sessionStorage
+            hash = sessionStorage.getItem('hash');
+            fetch('http://localhost:8001/v1/response', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({hashedUrl: hash, url: details.url})
+            })
             state = 'idle';
             imageUrls = [];
             frameIds = [];

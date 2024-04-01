@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 import subprocess
 import os
 import asyncio
@@ -30,6 +30,7 @@ class CreateTaskRequest(BaseModel):
     captchaUrl: str
     host: str
     port: int
+    cookies: Optional[str] = None
     username: Optional[str] = "user-sp0e9f6467-sessionduration-30"
     password: Optional[str] = "EWXv1a50bXfxc3vnsw"
     userAgent: Optional[str] = None
@@ -37,6 +38,8 @@ class CreateTaskRequest(BaseModel):
 TIMEOUT_IN_MINUTES = 1
 PROCESSING_URLS = set()
 RESPONSES = {}
+HASHES = {}
+COOKIES = {}
 MAX_BROWSERS = 15  # Maximum number of browsers that can be opened at a time
 semaphore = asyncio.Semaphore(MAX_BROWSERS)
 
@@ -65,12 +68,10 @@ def get_random_fingerprint():
         fingerprint_data["navigator"]["userAgent"] = user_agent
         return fingerprint_data
 
-def write_preferences(profile_dir: str, start_url: str, fingerprint: dict, create_task_request: CreateTaskRequest):
+def write_preferences(profile_dir: str, start_url: str, create_task_request: CreateTaskRequest, user_agent: str = None):
     preferences_path = f"{profile_dir}/Default/Preferences"
-
-    with open(os.path.join(os.path.dirname(__file__), PREFERENCES_PATH), "r", encoding="utf-8") as f:
+    with open(preferences_path, "r", encoding="utf-8") as f:
         preferences = json.load(f)
-        preferences["gologin"].update(fingerprint)
         preferences["gologin"]["startupUrl"] = start_url
         preferences["gologin"]["startup_urls"] = [start_url]
 
@@ -94,39 +95,32 @@ async def create_task(createTaskRequest: CreateTaskRequest):
 
         captcha_url = createTaskRequest.captchaUrl
         # Convert the captcha URL using the hashCode function
-        hash_code = sha256_hash(captcha_url)
+        hash_code = sha256_hash(captcha_url + str(time.time()))
+        HASHES[hash_code] = captcha_url
+        COOKIES[hash_code] = createTaskRequest.cookies
         # Copy directory to a temp directory
-        subprocess.run(["cp", "-r", PROFILE_DIR, f"/tmp/{hash_code}"])
+        subprocess.run(["unzip", PROFILE_DIR, '-d', f"/tmp/{hash_code}"])
         TEMP_PROFILE_DIR = f"/tmp/{hash_code}"
+        print(os.path.exists(TEMP_PROFILE_DIR))
 
         # Get a random fingerprint json file from `fingerprints`
-        fingerprint = get_random_fingerprint()
-        if user_agent:
-            fingerprint['navigator']['userAgent'] = user_agent
 
+        new_url = f'http://localhost:{API_PORT}/v1/redirect?hash_code={hash_code}'
 
         # Write captcha url as start url
-        write_preferences(TEMP_PROFILE_DIR, start_url=captcha_url, fingerprint=fingerprint, create_task_request=createTaskRequest)
+        write_preferences(TEMP_PROFILE_DIR, start_url=new_url, user_agent=user_agent, create_task_request=createTaskRequest)
 
-        EXTENSION_PATH = "/Users/administrator/Downloads/Projects/xhr-response-saver"
         # Launch the browser with the provided command
         command = [
             CHROME_PATH,
             f"--user-data-dir={TEMP_PROFILE_DIR}",
-            "--disable-encryption",
-            "--donut-pie=undefined",
-            "--font-masking-mode=2",
-            f"--load-extension=/Users/administrator/.gologin/extensions/cookies-ext/655208c87e736c4718ccde8e,/Users/administrator/.gologin/extensions/passwords-ext/655208c87e736c4718ccde8e,{EXTENSION_PATH}",
             f"--proxy-server=http://{proxy_host}:{proxy_port}",
             f"--host-resolver-rules=MAP * 0.0.0.0 , EXCLUDE {proxy_host}",
-            "--lang=en-US"
         ]
+        print(*command)
         async def process():
-            if captcha_url not in PROCESSING_URLS:
-                p = subprocess.Popen(command, start_new_session=True)
-                PROCESSING_URLS.add(captcha_url)
-            else:
-                p = MockP()
+            p = subprocess.Popen(command, start_new_session=True)
+            PROCESSING_URLS.add(captcha_url)
 
             try:
                 # Check time
@@ -151,7 +145,6 @@ async def create_task(createTaskRequest: CreateTaskRequest):
                 # Close the browser
                 p.terminate()
 
-                response_data['navigator'] = fingerprint['navigator']
 
                 return response_data
             finally:
@@ -179,6 +172,35 @@ async def response(request: Request):
     RESPONSES[hash_code] = response_data
     # Return the response
     return response_data
+
+@app.get("/v1/redirect")
+async def redirect(hash_code: str):
+    # Get the original URL from the hash code
+    original_url = HASHES.get(hash_code)
+    cookies = COOKIES.get(hash_code) or ''
+    if cookies:
+        cookies = '; '.join([f"{k}={v}" for k, v in json.loads(cookies).items()])
+    if cookies:
+        cookies = 'document.cookie = "' + cookies + '";'
+    # render the HTML that will save the hash into localstorage,
+    # add cookies to the browser for the original URL and redirect
+    html = f"""
+    <html>
+        <head>
+            <meta http-equiv="refresh" content="1;url={original_url}">
+            <script>
+                // save hash to sessionStorage
+                sessionStorage.setItem("hash", "{hash_code}");
+                {cookies}
+            </script>
+        </head>
+        <body>
+            Redirecting...
+        </body>
+    </html>
+    """
+    return Response(content=html, media_type="text/html")
+
 
 def sha256_hash(s):
     return hashlib.sha256(s.encode()).hexdigest()

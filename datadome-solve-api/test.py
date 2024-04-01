@@ -1,8 +1,48 @@
-from api import create_task, CreateTaskRequest
-import asyncio
+# import os
+# from dotenv import load_dotenv
+# load_dotenv()
+# from gologin import GoLogin, getRandomPort
+# from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options
+# from selenium.webdriver.chrome.service import Service
+# random_port = getRandomPort()
 
-create_task = CreateTaskRequest()
+# gl = GoLogin({
+#     'token': os.environ.get('GOLOGIN_API_KEY'),
+#     'profile_id': os.environ.get('GOLOGIN_PROFILE'),
+#     'port': random_port,
+#     # 'executablePath': '/Users/apple/.gologin/browser/orbita-browser-120/Orbita-Browser.app/Contents/MacOS/Orbita',
+# })
 
-captcha_url = 'https://geo.captcha-delivery.com/captcha/?initialCid=AHrlqAAAAAMAOrCI_A7YMg4AW6A3og==&hash=05B30BD9055986BD2EE8F5A199D973&cid=ZOpMeJSjxPdRvLH7ZAlN7Qj0247nZ5cuYnPW0YWx6TkSRq9U3YGayUmSgGjoaTU7nLr43ApRjW8rNKLW10NYhK3wr2pIkefayeH3epljWPDcSqkcDeJ339BLvYZozpZd&t=fe&referer=https%3A//www.leboncoin.fr/&s=2089&e=b3d7a8325e57a65c8744288824cc70acd551a7655ad4c159cb9b709303930431'
-# captcha_url = 'https://www.leboncoin.fr'
-asyncio.run(create_task(captcha_url))
+# address = gl.start()
+
+# service = Service('/Users/apple/Downloads/bot-mitigation/chromedriver')
+
+
+# options = Options()
+# options.add_experimental_option("debuggerAddress", address)
+# # driver = webdriver.Chrome(options=options)
+# driver = webdriver.Chrome(options=options, service=service)
+
+# driver.get("https://www.idealista.com/en/ajax/ads/99969147/contact-phones")
+
+# print(address)
+# input()
+
+# driver.quit()
+# gl.stop()
+
+
+from requests import post
+
+
+data = {
+    'password': 'EWXv1a50bXfxc3vnsw',
+    'username': 'user-sp0e9f6467',
+    'port': 40002,
+    'host': 'smartbalance2.com',
+    'captchaUrl': 'https://www.idealista.com/en/ajax/ads/99969147/contact-phones',
+
+}
+
+response = post('http://localhost:8001/v1/createTask', json=data)
