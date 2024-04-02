@@ -46,3 +46,4 @@ data = {
 }
 
 response = post('http://localhost:8001/v1/createTask', json=data)
+print(response.text)

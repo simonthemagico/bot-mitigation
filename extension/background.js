@@ -1,6 +1,8 @@
 // background.js
 let currentTab;
 
+let urlHash = '';
+
 let imageUrls = [];
 
 // on install
@@ -38,15 +40,29 @@ chrome.webRequest.onCompleted.addListener(
             return;
         }
         if (details.url.includes('/captcha/check')) {
-            // call localhost:8001/v1/response with the hash from sessionStorage
-            hash = sessionStorage.getItem('hash');
-            fetch('http://localhost:8001/v1/response', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({hashedUrl: hash, url: details.url})
-            })
+            // call localhost:8001/v1/response with the hash from chrome.storage.session;
+            chrome.storage.session.get(['hash']).then((data) => {
+                let hash = data.hash || urlHash;
+                console.log('Hash: ', hash);
+                fetch(details.url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    fetch('http://localhost:8001/v1/response', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({hashedUrl: hash, url: details.url, response: data})
+                    })
+                }).catch(error => {
+                    console.error('Error sending response to API: ', error);
+                });
+            });
             state = 'idle';
             imageUrls = [];
             frameIds = [];
@@ -115,3 +131,15 @@ function solvePuzzle(bgImageUrl, pieceImageUrl, tabId) {
         console.error('Error sending response to API: ', error);
     });
 }
+
+
+// get message from index.html 
+chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+    console.log('Message received: ', request);
+    if (request.message === 'storeHash') {
+        chrome.storage.session.set({hash: request.hash});
+        urlHash = request.hash;
+    }
+    sendResponse({message: 'Message received'});
+    return true;
+});

@@ -70,10 +70,14 @@ def get_random_fingerprint():
 
 def write_preferences(profile_dir: str, start_url: str, create_task_request: CreateTaskRequest, user_agent: str = None):
     preferences_path = f"{profile_dir}/Default/Preferences"
+    # copy this preferences file to a temp directory
+    shutil.copy(preferences_path, os.path.join(os.path.dirname(__file__), PREFERENCES_PATH))
     with open(preferences_path, "r", encoding="utf-8") as f:
         preferences = json.load(f)
         preferences["gologin"]["startupUrl"] = start_url
         preferences["gologin"]["startup_urls"] = [start_url]
+        preferences['extensions']['settings'].pop('lbhcblhkanlmlffdaahhojkacnldickj', None)
+        preferences['extensions']['settings']['mmfhdabkanddiamjgegcjmffmnogcpid']['location'] = 8
 
         preferences["gologin"]["proxy"]["username"] = create_task_request.username
         preferences["gologin"]["proxy"]["password"] = create_task_request.password
@@ -101,11 +105,11 @@ async def create_task(createTaskRequest: CreateTaskRequest):
         # Copy directory to a temp directory
         subprocess.run(["unzip", PROFILE_DIR, '-d', f"/tmp/{hash_code}"])
         TEMP_PROFILE_DIR = f"/tmp/{hash_code}"
-        print(os.path.exists(TEMP_PROFILE_DIR))
 
         # Get a random fingerprint json file from `fingerprints`
 
-        new_url = f'http://localhost:{API_PORT}/v1/redirect?hash_code={hash_code}'
+        extensionId = 'mmfhdabkanddiamjgegcjmffmnogcpid'
+        new_url = f'http://localhost:{API_PORT}/v1/redirect?hash_code={hash_code}&extensionId={extensionId}'
 
         # Write captcha url as start url
         write_preferences(TEMP_PROFILE_DIR, start_url=new_url, user_agent=user_agent, create_task_request=createTaskRequest)
@@ -174,7 +178,7 @@ async def response(request: Request):
     return response_data
 
 @app.get("/v1/redirect")
-async def redirect(hash_code: str):
+async def redirect(hash_code: str, extensionId: str):
     # Get the original URL from the hash code
     original_url = HASHES.get(hash_code)
     cookies = COOKIES.get(hash_code) or ''
@@ -187,15 +191,25 @@ async def redirect(hash_code: str):
     html = f"""
     <html>
         <head>
-            <meta http-equiv="refresh" content="1;url={original_url}">
             <script>
+            function Redirect() {{
                 // save hash to sessionStorage
-                sessionStorage.setItem("hash", "{hash_code}");
+                chrome.runtime.sendMessage("{extensionId}", {{
+                    message: "storeHash",
+                    hash: "{hash_code}"
+                }}, function(response) {{
+                    window.location = "{original_url}";
+                }});
                 {cookies}
+            }}
+            setTimeout(Redirect, 1000);
             </script>
         </head>
-        <body>
+        <body onload="Redirect()">
             Redirecting...
+            <div>
+                <a href="{original_url}">Click here if you are not redirected</a>
+            </div>
         </body>
     </html>
     """
