@@ -18,9 +18,13 @@ load_dotenv()
 
 app = FastAPI()
 
-PROFILE_DIR = os.getenv("PROFILE_DIR")
 CHROME_PATH = os.getenv("CHROME_PATH")
 EXTENSION_PATH = os.getenv("EXTENSION_PATH")
+EXTENSION_ID = os.getenv("EXTENSION_ID")
+
+# ~/Downloads/gologin_{EXTENSION_ID}.zip
+PROFILE_DIR = os.getenv('HOME') + f"/Downloads/gologin_{EXTENSION_ID}.zip"
+
 RESPONSES_PATH = os.getenv("RESPONSES_PATH")
 PREFERENCES_PATH = os.getenv("PREFERENCES_PATH")
 USE_DISPLAY = os.getenv("USE_DISPLAY", "false").lower() == "true"
@@ -76,8 +80,7 @@ def write_preferences(profile_dir: str, start_url: str, create_task_request: Cre
         preferences = json.load(f)
         preferences["gologin"]["startupUrl"] = start_url
         preferences["gologin"]["startup_urls"] = [start_url]
-        preferences['extensions']['settings'].pop('lbhcblhkanlmlffdaahhojkacnldickj', None)
-        preferences['extensions']['settings']['mmfhdabkanddiamjgegcjmffmnogcpid']['location'] = 8
+        preferences['extensions']['settings']['enhdnjlcnmhiplinedcodcalnmpkejej']['location'] = 8
 
         preferences["gologin"]["proxy"]["username"] = create_task_request.username
         preferences["gologin"]["proxy"]["password"] = create_task_request.password
@@ -98,6 +101,8 @@ async def create_task(createTaskRequest: CreateTaskRequest):
         user_agent = createTaskRequest.userAgent
 
         captcha_url = createTaskRequest.captchaUrl
+        if 'geo.captcha-delivery.com' in captcha_url:
+            raise HTTPException(status_code=400, detail="Cannot solve geo.captcha-delivery.com captchas")
         # Convert the captcha URL using the hashCode function
         hash_code = sha256_hash(captcha_url + str(time.time()))
         HASHES[hash_code] = captcha_url
@@ -108,8 +113,7 @@ async def create_task(createTaskRequest: CreateTaskRequest):
 
         # Get a random fingerprint json file from `fingerprints`
 
-        extensionId = 'mmfhdabkanddiamjgegcjmffmnogcpid'
-        new_url = f'http://localhost:{API_PORT}/v1/redirect?hash_code={hash_code}&extensionId={extensionId}'
+        new_url = f'http://localhost:{API_PORT}/v1/redirect?hash_code={hash_code}&extensionId=enhdnjlcnmhiplinedcodcalnmpkejej'
 
         # Write captcha url as start url
         write_preferences(TEMP_PROFILE_DIR, start_url=new_url, user_agent=user_agent, create_task_request=createTaskRequest)
@@ -148,7 +152,6 @@ async def create_task(createTaskRequest: CreateTaskRequest):
 
                 # Close the browser
                 p.terminate()
-
 
                 return response_data
             finally:
@@ -196,9 +199,8 @@ async def redirect(hash_code: str, extensionId: str):
                 // save hash to sessionStorage
                 chrome.runtime.sendMessage("{extensionId}", {{
                     message: "storeHash",
-                    hash: "{hash_code}"
-                }}, function(response) {{
-                    window.location = "{original_url}";
+                    hash: "{hash_code}",
+                    url: "{original_url}"
                 }});
                 {cookies}
             }}
