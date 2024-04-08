@@ -61,14 +61,12 @@ function retryAndCallApi(hash, currentUrl) {
         chrome.storage.session.get(['hashTimeout']).then((data) => {
             console.log('HashTimeout: ', data.hashTimeout);
             let hashTimeout = data.hashTimeout || 0;
+            chrome.storage.session.set({hashTimeout: hashTimeout + 1});
             if (hashTimeout > 1) {
-                chrome.storage.session.set({hashTimeout: hashTimeout + 1});
                 setTimeout(() => {
                     callToApi(hash, currentUrl, currentUrl);
                 }, 1000);
                 return;
-            } else {
-                chrome.storage.session.set({hashTimeout: 1});
             }
             // open new tab with the captchaUrl
             chrome.tabs.create({url: captchaUrl});

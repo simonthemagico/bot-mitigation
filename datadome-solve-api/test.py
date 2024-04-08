@@ -18,12 +18,11 @@ from requests import post
 
 
 data = {
-    'password': 'EWXv1a50bXfxc3vnsw',
-    'username': 'user-sp0e9f6467',
-    'port': 40005,
-    'host': 'smartbalance2.com',
-    'captchaUrl': 'https://www.idealista.com/',
-
+    "captchaUrl": "https://antoinevastel.com/bots/datadome",
+    "host": "smartbalance2.com",
+    "port": "43185",
+    "username": "user-sp0e9f6467-sessionduration-30",
+    "password": "EWXv1a50bXfxc3vnsw",
 }
 
 response = post('http://localhost:8001/v1/createTask', json=data)
