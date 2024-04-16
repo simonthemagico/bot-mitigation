@@ -18,12 +18,13 @@ from requests import post
 
 
 data = {
-    "captchaUrl": "https://antoinevastel.com/bots/datadome",
+    "captchaUrl": "https://www.idealista.com/en/ajax/ads/102696007/contact-phones",
     "host": "smartbalance2.com",
     "port": "43185",
     "username": "user-sp0e9f6467-sessionduration-30",
     "password": "EWXv1a50bXfxc3vnsw",
 }
 
-response = post('http://localhost:8001/v1/createTask', json=data)
-print(response.text)
+for i in range(5):
+    response = post('http://localhost:8002/v1/createTask', json=data)
+    print(response.text)

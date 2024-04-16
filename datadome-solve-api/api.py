@@ -75,7 +75,7 @@ def get_random_fingerprint():
 def write_preferences(profile_dir: str, start_url: str, create_task_request: CreateTaskRequest, user_agent: str = None):
     preferences_path = f"{profile_dir}/Default/Preferences"
     # copy this preferences file to a temp directory
-    shutil.copy(preferences_path, os.path.join(os.path.dirname(__file__), PREFERENCES_PATH))
+    # shutil.copy(preferences_path, os.path.join(os.path.dirname(__file__), PREFERENCES_PATH))
     with open(preferences_path, "r", encoding="utf-8") as f:
         preferences = json.load(f)
         preferences["gologin"]["startupUrl"] = start_url
@@ -124,6 +124,16 @@ async def create_task(createTaskRequest: CreateTaskRequest):
             f"--user-data-dir={TEMP_PROFILE_DIR}",
             f"--proxy-server=http://{proxy_host}:{proxy_port}",
             f"--host-resolver-rules=MAP * 0.0.0.0 , EXCLUDE {proxy_host}",
+            "--disable-encryption",
+            "--donut-pie=undefined",
+            "--font-masking-mode=2",
+            '--disable-application-cache',
+            '--disable-offline-load-stale-cache',
+            '--disable-gpu-program-cache',
+            '--disable-gpu-shader-disk-cache',
+            # disable disk-cache
+            "--disk-cache-dir=/dev/null",
+            "--aggresive-cache-discard",
         ]
         print(*command)
         async def process():
@@ -200,7 +210,8 @@ async def redirect(hash_code: str, extensionId: str):
                 chrome.runtime.sendMessage("{extensionId}", {{
                     message: "storeHash",
                     hash: "{hash_code}",
-                    url: "{original_url}"
+                    url: "{original_url}",
+                    apiPort: {API_PORT}
                 }});
                 {cookies}
             }}
