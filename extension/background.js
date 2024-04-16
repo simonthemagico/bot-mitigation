@@ -6,6 +6,8 @@ let captchaUrl = '';
 
 let imageUrls = [];
 
+let apiPort = 8001;
+
 // on install
 chrome.runtime.onInstalled.addListener(() => {
     console.log('Extension installed and background service worker started.');
@@ -37,8 +39,10 @@ chrome.webRequest.onBeforeRequest.addListener(
         if (!details.url.includes('captcha-delivery.com')) {
             return;
         }
+        chrome.storage.session.get(['captchaUrl']).then((data) => {
+            captchaUrl = data.captchaUrl || captchaUrl;
+        });
         if(details.url.includes('&t=bv&')) {
-            // call localhost:8001/v1/response with the hash from chrome.storage.session;
             sendToApi("blocked");
         }
         // save image urls in the global variable if ends with .png or .jpg
@@ -59,8 +63,8 @@ function retryAndCallApi(hash, currentUrl) {
         });
         // check if hashTimeout is set
         chrome.storage.session.get(['hashTimeout']).then((data) => {
-            console.log('HashTimeout: ', data.hashTimeout);
             let hashTimeout = data.hashTimeout || 0;
+            console.log('HashTimeout: ', hashTimeout);
             chrome.storage.session.set({hashTimeout: hashTimeout + 1});
             if (hashTimeout > 1) {
                 setTimeout(() => {
@@ -68,6 +72,9 @@ function retryAndCallApi(hash, currentUrl) {
                 }, 1000);
                 return;
             }
+            state = 'idle';
+            imageUrls = [];
+            frameIds = [];
             // open new tab with the captchaUrl
             chrome.tabs.create({url: captchaUrl});
                 // close the current tab
@@ -77,20 +84,24 @@ function retryAndCallApi(hash, currentUrl) {
     });    
 }
 
-function callToApi(hash, currentUrl, data){
-    fetch('http://localhost:8001/v1/response', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({hashedUrl: hash, url: currentUrl, body: data})
-    })
+function callToApi(hash, currentUrl, response){
+    chrome.storage.session.get(['apiPort']).then((data) => {
+        apiPort = data.apiPort || apiPort;
+        fetch(`http://localhost:${apiPort}/v1/response`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({hashedUrl: hash, url: currentUrl, body: response})
+        })
+    });
 }
 
 function sendToApi(currentUrl){
     chrome.storage.session.get(['hash']).then((data) => {
         let hash = data.hash || urlHash;
         console.log('Hash: ', hash);
+        console.log('url: ', currentUrl);
         if (currentUrl.includes('/captcha/check'))
             fetch(currentUrl, {
                 method: 'GET',
@@ -102,7 +113,7 @@ function sendToApi(currentUrl){
             .then(data => {
                 callToApi(hash, currentUrl, data);
             }).catch(error => {
-                console.error('Error sending response to API: ', error);
+                console.error('Error getting cookies', error);
             });
         else if(currentUrl == 'blocked')
             retryAndCallApi(hash, currentUrl);
@@ -128,7 +139,6 @@ chrome.webRequest.onCompleted.addListener(
             return;
         }
         if (details.url.includes('/captcha/check')) {
-            // call localhost:8001/v1/response with the hash from chrome.storage.session;
             sendToApi(details.url);
             state = 'idle';
             imageUrls = [];
@@ -174,7 +184,7 @@ function sendMessageToIframe(action, xCoord) {
 // solve puzzle
 function solvePuzzle(bgImageUrl, pieceImageUrl, retries = 0) {
     console.log('Solving puzzle with bgImageUrl: ', bgImageUrl, ' and pieceImageUrl: ', pieceImageUrl);
-    const url = `https://captcha.riseofninja.com/api/v1/puzzleSolver`;
+    const url = `http://localhost:8015/api/v1/puzzleSolver`;
     fetch(url, {
         method: 'POST',
         headers: {
@@ -192,11 +202,13 @@ function solvePuzzle(bgImageUrl, pieceImageUrl, retries = 0) {
     })
     .catch(error => {
         console.error('Error sending response to API: ', error);
+        // log full exception
         if (retries < 3) {
             console.log('Retrying to solve puzzle');
             solvePuzzle(bgImageUrl, pieceImageUrl, retries + 1);
         }
         else {
+            console.log("Blocked");
             sendToApi('blocked');
         }
     });
@@ -209,12 +221,26 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
     if (request.message === 'storeHash') {
         chrome.storage.session.set({hash: request.hash});
         urlHash = request.hash;
+        if (request.apiPort){
+            console.log('API Port: ', request.apiPort);
+            chrome.storage.session.set({apiPort: request.apiPort});
+        }
         captchaUrl = request.url;
+        chrome.storage.session.set({captchaUrl: captchaUrl});
         // close the tab
         // open new tab with the captchaUrl
         chrome.tabs.create({url: captchaUrl});
         // close the current tab
         chrome.tabs.remove(sender.tab.id);
+    }
+    return true;
+});
+
+// on message from content.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('Message received: ', request);
+    if (request.action === 'slideSlider') {
+        sendToApi('blocked');
     }
     return true;
 });

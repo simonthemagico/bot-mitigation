@@ -51,7 +51,7 @@ if (window !== window.top) {
                 console.log('Sliderbg not found, retrying...');
                 setTimeout(() => slideSliderbg(x, retries + 1), 1000);
             } else {
-                console.error('Sliderbg not found');
+                chrome.runtime.sendMessage({ action: "sliderNotFound" })
             }
         }
     }
