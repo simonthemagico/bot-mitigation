@@ -1,19 +1,17 @@
 // background.js
 let currentTab;
-
 let urlHash = '';
 let captchaUrl = '';
-
 let imageUrls = [];
-
 let apiPort = 8001;
+let frameIds = []; // Store frameIds of interest
+let state = 'idle';
 
 // on install
 chrome.runtime.onInstalled.addListener(() => {
     console.log('Extension installed and background service worker started.');
 });
 
-let state = 'idle';
 
 // on tab load complete
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -25,7 +23,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status === 'complete' && tab.url.match(/^https?:\/\/.*/)) {
         // check if the tab is not already in the frameIds
         if(captchaUrl != '' && imageUrls.length == 0 && state === 'idle') {
-            sendToApi('completed');
+            // check if not home_visit
+            chrome.storage.session.get(['home_visit']).then((data) => {
+                let home_visit = data.home_visit || false;
+                if (!home_visit) {
+                    sendToApi('completed');
+                }
+            });
         }
     }
 
@@ -44,6 +48,9 @@ chrome.webRequest.onBeforeRequest.addListener(
         });
         if(details.url.includes('&t=bv&')) {
             sendToApi("blocked");
+        }
+        if (details.url.includes('/interstitial/')) {
+            state = 'interstitial';
         }
         // save image urls in the global variable if ends with .png or .jpg
         if (details.url.endsWith('.png') || details.url.endsWith('.jpg')) {
@@ -139,7 +146,7 @@ chrome.webRequest.onCompleted.addListener(
             return;
         }
         if (details.url.includes('/captcha/check')) {
-            sendToApi(details.url);
+            // sendToApi(details.url);
             state = 'idle';
             imageUrls = [];
             frameIds = [];
@@ -156,8 +163,6 @@ chrome.webRequest.onCompleted.addListener(
     { urls: ["<all_urls>"]}
 );
 
-
-let frameIds = []; // Store frameIds of interest
 
 chrome.webNavigation.onCommitted.addListener(details => {
     if (details.frameId !== 0 && details.url.includes("captcha-delivery.com")) {
@@ -225,13 +230,28 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
             console.log('API Port: ', request.apiPort);
             chrome.storage.session.set({apiPort: request.apiPort});
         }
+        let home_url = request.home_url;
         captchaUrl = request.url;
         chrome.storage.session.set({captchaUrl: captchaUrl});
         // close the tab
-        // open new tab with the captchaUrl
-        chrome.tabs.create({url: captchaUrl});
-        // close the current tab
-        chrome.tabs.remove(sender.tab.id);
+        if (home_url){
+            // open home_url and after 2 seconds close the tab
+            // and open captcha_url
+            chrome.tabs.create({url: home_url}, (tab) => {
+                chrome.storage.session.set({home_visit: true});
+                chrome.tabs.remove(sender.tab.id);
+                setTimeout(() => {
+                    // remove storage home_visit and open captchaUrl
+                    chrome.storage.session.remove('home_visit');
+                    chrome.tabs.create({url: captchaUrl});
+                    chrome.tabs.remove(tab.id);
+                }, 10000);
+            });
+        }
+        else {
+            chrome.tabs.create({url: captchaUrl});
+            chrome.tabs.remove(sender.tab.id);
+        }
     }
     return true;
 });

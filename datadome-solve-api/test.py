@@ -18,13 +18,15 @@ from requests import post
 
 
 data = {
-    "captchaUrl": "https://www.idealista.com/en/ajax/ads/102696007/contact-phones",
+    "captchaUrl": "https://www.seloger.com/list.htm?projects=2&types=2,1,9&natures=1&places=[{%22subDivisions%22:[%2275%22]},{%22subDivisions%22:[%2292%22]}]&price=140000/NaN&surface=14/NaN&sort=d_dt_crea&mandatorycommodities=0&picture=15&enterprise=0&epc=E,D,C,B,A,F,G&qsVersion=1.0&m=search_refine-redirection-search_results",
     "host": "smartbalance2.com",
-    "port": "43185",
+    "port": "43182",
     "username": "user-sp0e9f6467-sessionduration-30",
     "password": "EWXv1a50bXfxc3vnsw",
+    "visit_home": True
 }
 
 for i in range(5):
-    response = post('http://localhost:8002/v1/createTask', json=data)
+    response = post('http://localhost:8001/v1/createTask', json=data)
     print(response.text)
+    break

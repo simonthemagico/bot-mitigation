@@ -1,4 +1,5 @@
 from typing import Optional
+from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException, Request, Response
 import subprocess
 import os
@@ -34,7 +35,8 @@ class CreateTaskRequest(BaseModel):
     captchaUrl: str
     host: str
     port: int
-    cookies: Optional[str] = None
+    visit_home: Optional[bool] = False
+    cookies: Optional[dict] = None
     username: Optional[str] = "user-sp0e9f6467-sessionduration-30"
     password: Optional[str] = "EWXv1a50bXfxc3vnsw"
     userAgent: Optional[str] = None
@@ -99,6 +101,7 @@ async def create_task(createTaskRequest: CreateTaskRequest):
         proxy_host = createTaskRequest.host
         proxy_port = createTaskRequest.port
         user_agent = createTaskRequest.userAgent
+        visit_home = createTaskRequest.visit_home
 
         captcha_url = createTaskRequest.captchaUrl
         if 'geo.captcha-delivery.com' in captcha_url:
@@ -114,6 +117,11 @@ async def create_task(createTaskRequest: CreateTaskRequest):
         # Get a random fingerprint json file from `fingerprints`
 
         new_url = f'http://localhost:{API_PORT}/v1/redirect?hash_code={hash_code}&extensionId=enhdnjlcnmhiplinedcodcalnmpkejej'
+
+        if visit_home:
+            obj = urlparse(captcha_url)
+            home_url = obj.scheme + "://" + obj.netloc
+            new_url += f"&home_url={home_url}"
 
         # Write captcha url as start url
         write_preferences(TEMP_PROFILE_DIR, start_url=new_url, user_agent=user_agent, create_task_request=createTaskRequest)
@@ -191,14 +199,12 @@ async def response(request: Request):
     return response_data
 
 @app.get("/v1/redirect")
-async def redirect(hash_code: str, extensionId: str):
+async def redirect(hash_code: str, extensionId: str, home_url: str = ""):
     # Get the original URL from the hash code
     original_url = HASHES.get(hash_code)
-    cookies = COOKIES.get(hash_code) or ''
+    cookies = COOKIES.pop(hash_code, {}) or {}
     if cookies:
-        cookies = '; '.join([f"{k}={v}" for k, v in json.loads(cookies).items()])
-    if cookies:
-        cookies = 'document.cookie = "' + cookies + '";'
+        cookies = json.dumps(cookies)
     # render the HTML that will save the hash into localstorage,
     # add cookies to the browser for the original URL and redirect
     html = f"""
@@ -210,10 +216,11 @@ async def redirect(hash_code: str, extensionId: str):
                 chrome.runtime.sendMessage("{extensionId}", {{
                     message: "storeHash",
                     hash: "{hash_code}",
+                    home_url: "{home_url}",
                     url: "{original_url}",
+                    cookies: {cookies},
                     apiPort: {API_PORT}
                 }});
-                {cookies}
             }}
             setTimeout(Redirect, 1000);
             </script>
