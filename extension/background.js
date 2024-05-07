@@ -26,9 +26,21 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             // check if not home_visit
             chrome.storage.session.get(['home_visit']).then((data) => {
                 let home_visit = data.home_visit || false;
-                if (!home_visit) {
-                    sendToApi('completed');
+                if (home_visit) {
+                    // remove storage home_visit and open captchaUrl
+                    chrome.storage.session.remove('home_visit');
+                    imageUrls = [];
+                    frameIds = [];
+                    state = 'idle';
+                    chrome.tabs.create({url: captchaUrl});
+                    chrome.tabs.remove(tab.id);
                 }
+                else {
+                setTimeout(() => {
+                    sendToApi("completed");
+                }, 5000);
+            }
+
             });
         }
     }
@@ -43,11 +55,12 @@ chrome.webRequest.onBeforeRequest.addListener(
         if (!details.url.includes('captcha-delivery.com')) {
             return;
         }
+        console.log('Request started: ', details.url);
         chrome.storage.session.get(['captchaUrl']).then((data) => {
             captchaUrl = data.captchaUrl || captchaUrl;
         });
         if(details.url.includes('&t=bv&')) {
-            sendToApi("blocked");
+            return sendToApi("blocked");
         }
         if (details.url.includes('/interstitial/')) {
             state = 'interstitial';
@@ -56,7 +69,6 @@ chrome.webRequest.onBeforeRequest.addListener(
         if (details.url.endsWith('.png') || details.url.endsWith('.jpg')) {
             imageUrls.push(details.url);
         }
-        console.log('Request started: ', details.url);
     },
     { urls: ["<all_urls>"] }
 );
@@ -125,11 +137,12 @@ function sendToApi(currentUrl){
         else if(currentUrl == 'blocked')
             retryAndCallApi(hash, currentUrl);
         else {
-            // get cookie for datadome
-            chrome.cookies.getAll({url: captchaUrl}, function(cookies) {
-                let datadomeCookie = cookies.find(cookie => cookie.name === 'datadome');
+            // get all cookies from the browser for all sites
+            chrome.cookies.getAll({}, function(cookies) {
+                let datadomeCookie = cookies.find(cookie => cookie.name === 'datadome' && captchaUrl.includes(cookie.domain));
                 callToApi(hash, captchaUrl, {
-                    cookie: 'datadome=' + datadomeCookie.value + ';'
+                    cookie: 'datadome=' + datadomeCookie.value + ';',
+                    cookies
                 });
             });
         }
@@ -172,7 +185,7 @@ chrome.webNavigation.onCommitted.addListener(details => {
     }
 }, { url: [{ urlMatches: 'captcha-delivery.com' }] });
 
-function sendMessageToIframe(action, xCoord) {
+function sendMessageToIframe(message) {
    // execute content.js script in all iframes
    // and then send message to the iframe
    chrome.scripting.executeScript({
@@ -181,7 +194,7 @@ function sendMessageToIframe(action, xCoord) {
     }).then(() => {
         console.log('Script executed in all frames');
         frameIds.forEach(frame => {
-            chrome.tabs.sendMessage(frame.tabId, {action, xCoord}, {frameId: frame.frameId});
+            chrome.tabs.sendMessage(frame.tabId, message, {frameId: frame.frameId});
         });
     });
 }
@@ -203,7 +216,7 @@ function solvePuzzle(bgImageUrl, pieceImageUrl, retries = 0) {
     .then(response =>  response.json())
     .then(data => {
         console.log('Response from API: ', data);
-        sendMessageToIframe("slideSlider", data.x);
+        sendMessageToIframe({action: "slideSlider", xCoord: data.x});
     })
     .catch(error => {
         console.error('Error sending response to API: ', error);
@@ -240,12 +253,6 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
             chrome.tabs.create({url: home_url}, (tab) => {
                 chrome.storage.session.set({home_visit: true});
                 chrome.tabs.remove(sender.tab.id);
-                setTimeout(() => {
-                    // remove storage home_visit and open captchaUrl
-                    chrome.storage.session.remove('home_visit');
-                    chrome.tabs.create({url: captchaUrl});
-                    chrome.tabs.remove(tab.id);
-                }, 10000);
             });
         }
         else {

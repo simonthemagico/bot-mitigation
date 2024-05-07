@@ -71,4 +71,23 @@ if (window !== window.top) {
 } else {
     // The script is in the top-level window
     console.log('content.js loaded in the main window, not doing anything.');
+
 }
+
+function clickAgree() {
+    // if didomi-notice-agree-button exists, click it
+    var didmoiNoticeAgreeButton = document.querySelector("#didomi-notice-agree-button");
+    if (didmoiNoticeAgreeButton) {
+        didmoiNoticeAgreeButton.click();
+    }
+    else{
+        setTimeout(() => {
+            clickAgree();
+        }, 1000);
+    }
+};
+
+clickAgree();
+setTimeout(() => {
+    clickAgree();
+}, 1000);
