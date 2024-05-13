@@ -36,10 +36,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
                     chrome.tabs.remove(tab.id);
                 }
                 else {
-                setTimeout(() => {
                     sendToApi("completed");
-                }, 5000);
-            }
+                }
 
             });
         }
@@ -159,10 +157,10 @@ chrome.webRequest.onCompleted.addListener(
             return;
         }
         if (details.url.includes('/captcha/check')) {
-            // sendToApi(details.url);
             state = 'idle';
             imageUrls = [];
             frameIds = [];
+            sendToApi(details.url);
         }
         console.log('Request completed: ', details.url);
         if (imageUrls.length === 2 && frameIds.length > 0 && state === 'idle') {
