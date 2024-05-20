@@ -7,6 +7,7 @@ let apiPort = 8001;
 let frameIds = []; // Store frameIds of interest
 let state = 'idle';
 
+
 // on install
 chrome.runtime.onInstalled.addListener(() => {
     console.log('Extension installed and background service worker started.');
@@ -54,21 +55,46 @@ chrome.webRequest.onBeforeRequest.addListener(
             return;
         }
         console.log('Request started: ', details.url);
-        chrome.storage.session.get(['captchaUrl']).then((data) => {
-            captchaUrl = data.captchaUrl || captchaUrl;
-        });
-        if(details.url.includes('&t=bv&')) {
+        if (details.url.includes('/captcha/check') || details.url.includes('/interstitial/'))
+            chrome.storage.session.get(['captchaUrl']).then((data) => {
+                captchaUrl = data.captchaUrl || captchaUrl;
+            });
+        if(details.url.includes('&t=bv&'))
             return sendToApi("blocked");
-        }
-        if (details.url.includes('/interstitial/')) {
+        if (details.url.includes('/interstitial/'))
             state = 'interstitial';
+            // get request body
+        if (details.url == 'https://geo.captcha-delivery.com/interstitial/') {
+            try{
+                apiPort = 8000;
+                let requestBody = details.requestBody;
+                if (requestBody.raw) {
+                    let decodedString = String.fromCharCode.apply(
+                        null,
+                        new Uint8Array(requestBody.raw[0].bytes)
+                    );
+                    sendToApi(decodedString, true);
+                }
+                if (requestBody.formData) {
+                    let formData = requestBody.formData;
+                    let payload = '';
+                    for (let key in formData) {
+                        payload += key + '=' + formData[key] + '&';
+                    }
+                    sendToApi(payload, true);
+                }
+            } catch (error) {
+                console.error('Error getting request body: ', error);
+            }
+            console.log('Interstitial Captcha: ');
         }
         // save image urls in the global variable if ends with .png or .jpg
         if (details.url.endsWith('.png') || details.url.endsWith('.jpg')) {
             imageUrls.push(details.url);
         }
     },
-    { urls: ["<all_urls>"] }
+    { urls: ["<all_urls>"] },
+    ["requestBody"]
 );
 
 function retryAndCallApi(hash, currentUrl) {
@@ -114,7 +140,7 @@ function callToApi(hash, currentUrl, response){
     });
 }
 
-function sendToApi(currentUrl){
+function sendToApi(currentUrl, is_payload = false){
     chrome.storage.session.get(['hash']).then((data) => {
         let hash = data.hash || urlHash;
         console.log('Hash: ', hash);
@@ -137,11 +163,15 @@ function sendToApi(currentUrl){
         else {
             // get all cookies from the browser for all sites
             chrome.cookies.getAll({}, function(cookies) {
-                let datadomeCookie = cookies.find(cookie => cookie.name === 'datadome' && captchaUrl.includes(cookie.domain));
-                callToApi(hash, captchaUrl, {
-                    cookie: 'datadome=' + datadomeCookie.value + ';',
-                    cookies
-                });
+                const body = {};
+                if(!is_payload)
+                {
+                    let datadomeCookie = cookies.find(cookie => cookie.name === 'datadome' && captchaUrl.includes(cookie.domain));
+                    body.cookie = 'datadome=' + datadomeCookie.value + ';';
+                    body.cookies = cookies;
+                }
+                else body.payload = currentUrl;
+                callToApi(hash, captchaUrl, body);
             });
         }
     });
