@@ -78,37 +78,14 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
             redirect = build_url(response.text, old_cookie, target_url)
             print(redirect)
 
-        """ request to get the interstitial html
-        """
-
-        headers = {
-            "Host": "geo.captcha-delivery.com",
-            "User-Agent": ua,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "Sec-Fetch-Site": "cross-site",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Dest": "iframe",
-            "Referer": main_url,
-            "Accept-Encoding": "gzip, deflate, br, zstd",
-            "Accept-Language": "de-DE,de;q=0.9"
-        }
-
-        res = session.get(redirect, headers=headers)
-
-        if res.status_code != 200:
-            raise ValueError(f'error while trying to get interstitial1: {str(res.status_code)}')
-
-        script = res.text
-
         """ This part is getting the interstitial payload
         """
-        payload = get_datadome_payload(script, old_cookie)
+        payload = get_datadome_payload(redirect, old_cookie)
         payload['referer'] = url
         payload['dm'] = 'cd'
-
         headers = {
             "Host": "geo.captcha-delivery.com",
-            "User-Agent": ua,
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             "Accept": "*/*",
             "Origin": "https://geo.captcha-delivery.com",
@@ -151,16 +128,16 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
         print(error)
 
 
-def get_datadome_payload(script, cid):
+def get_datadome_payload(curl, cid):
     """
     # Get the interstitial payload from the host api
 
-    :param script:
+    :param url:
     :param cid:
     :return interstitial payload:
     """
     print('trying to get dd payload')
-    url = host_api_url + '/post-payload'
+    url = host_api_url + '/verify-browser'
     headers = {
         'Content-Type': 'application/json'
     }
@@ -168,7 +145,7 @@ def get_datadome_payload(script, cid):
     license_key = 'bf25aecf-f3f8-4bf9-9488-7b94dfcee77c'
 
     payload = {
-        'script': script,
+        'url': curl,
         'cid': cid,
         'license_key': license_key
     }
@@ -186,6 +163,7 @@ def get_datadome_payload(script, cid):
         res = requests.post(url, headers=headers, json=payload)
         response = json.loads(res.text)
         if response['status'] == 'ready':
+            print(response)
             return response['value']
         if response['status'] == 'error':
             raise Exception('Failed to get payload')

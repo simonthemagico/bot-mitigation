@@ -4,6 +4,7 @@ import os
 import threading
 import pychrome
 import random
+from urllib.parse import unquote
 
 
 # create files/ directory if it doesn't exist
@@ -11,11 +12,14 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 if not os.path.exists(current_dir + '/files'):
     os.makedirs(current_dir + '/files')
 
+previous_dir = os.path.dirname(current_dir)
+
 app = FastAPI()
 
 port = random.randint(9222, 9322)
-
-os.system(f'"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --remote-debugging-port={port} &')
+# add extension ../extension
+print(previous_dir)
+os.system(f'"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --remote-debugging-port={port} --load-extension={previous_dir}/extension &')
 
 # A simple method to create a browser tab and navigate to a URL
 def create_browser_tab(url):
@@ -39,8 +43,20 @@ def process(task_id):
     tab.stop()
     browser.close_tab(tab)
 
+def process_url(task_id):
+    task = tasks[task_id]
+    url = task['url']
+    tab, browser = create_browser_tab(url)
+    for _ in range(10):
+        if task['status'] == 'ready':
+            break
+        tab.wait(1)
+    tab.stop()
+    browser.close_tab(tab)
+
 tasks = {}
 
+# verify by script
 @app.post("/post-payload")
 async def post_datadome(request: Request):
     data = await request.json()
@@ -65,6 +81,28 @@ async def post_datadome(request: Request):
     return {
         'task_id': task_id,
     }
+
+# verify by url
+@app.post("/verify-browser")
+async def verify_browser(request: Request):
+    data = await request.json()
+    url = data['url']
+    cid = data['cid']
+    task_id = str(uuid4())
+    tasks[task_id] = {
+        'status': 'pending',
+        'value': None,
+        'cid': cid,
+        'url': url,
+    }
+    # open a new thread to process the payload
+    t = threading.Thread(target=process_url, args=(task_id,))
+    t.start()
+    tasks[task_id]['status'] = 'processing'
+    return {
+        'task_id': task_id,
+    }
+
 
 @app.post("/get-payload")
 async def get_datadome(request: Request):
@@ -119,6 +157,26 @@ async def interstitial(request: Request):
     return {
         "cookie": "datadome=" + cid + ';'
     }
+
+@app.post("/v1/response")
+async def response(request: Request):
+    data = await request.json()
+    print(data)
+    body = data['body']
+    payload = body['payload']
+    # turn 'k=v&k=v' into {'k': 'v', 'k': 'v'}
+    json_data = {}
+    urlparams = payload.split('&')
+    for param in urlparams:
+        key, value = param.split('=', 1)
+        # urldecode
+        json_data[key] = unquote(value)
+    cid = json_data['cid']
+    # modify all tasks with the same cid
+    for _, task in tasks.items():
+        if task['cid'] == cid:
+            task['value'] = json_data
+            task['status'] = 'ready'
 
 if __name__ == "__main__":
     import uvicorn
