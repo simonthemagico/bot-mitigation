@@ -1,10 +1,13 @@
+import json
 from fastapi import FastAPI, Request, Response
 from uuid import uuid4
 import os
 import threading
 import pychrome
 import random
-from urllib.parse import unquote
+from urllib.parse import unquote, quote
+
+API_PORT = 8000
 
 
 # create files/ directory if it doesn't exist
@@ -33,7 +36,7 @@ def create_browser_tab(url):
     return tab, browser
 
 def process(task_id):
-    url = "http://localhost:8000/task-" + task_id
+    url = f"http://localhost:{API_PORT}/task-" + task_id
     tab, browser = create_browser_tab(url)
     task = tasks[task_id]
     for _ in range(10):
@@ -55,6 +58,35 @@ def process_url(task_id):
     browser.close_tab(tab)
 
 tasks = {}
+
+
+@app.get("/storePort")
+async def redirect(extensionId: str, captcha_url: str, hash_url: str):
+    html = f"""
+    <html>
+        <head>
+            <script>
+            function Redirect() {{
+                // save hash to sessionStorage
+                chrome.runtime.sendMessage("{extensionId}", {{
+                    message: "storeHash",
+                    apiPort: {API_PORT},
+                    hash: "{hash_url}",
+                    url: "{captcha_url}"
+                }});
+            }}
+            setTimeout(Redirect, 1000);
+            </script>
+        </head>
+        <body onload="Redirect()">
+            Redirecting...
+            <div>
+                <a href="{captcha_url}">Click here if you are not redirected</a>
+            </div>
+        </body>
+    </html>
+    """
+    return Response(content=html, media_type="text/html")
 
 # verify by script
 @app.post("/post-payload")
@@ -89,6 +121,8 @@ async def verify_browser(request: Request):
     url = data['url']
     cid = data['cid']
     task_id = str(uuid4())
+    if '/captcha/' in  url:
+        url = f'http://localhost:{API_PORT}/storePort?extensionId=enhdnjlcnmhiplinedcodcalnmpkejej&hash_url={cid}&captcha_url=' + quote(url)
     tasks[task_id] = {
         'status': 'pending',
         'value': None,
@@ -158,20 +192,43 @@ async def interstitial(request: Request):
         "cookie": "datadome=" + cid + ';'
     }
 
+@app.get("/captcha/check")
+async def interstitial(request: Request):
+    # get params ?cid=123&k=v
+    params: str = request.query_params
+    cid = params['cid']
+    # modify all tasks with the same cid
+    for _, task in tasks.items():
+        if task['cid'] == cid:
+            task['value'] = params
+            task['status'] = 'ready'
+    # remove file
+    return {
+        "cookie": "datadome=" + cid + ';'
+    }
+
 @app.post("/v1/response")
 async def response(request: Request):
     data = await request.json()
-    print(data)
     body = data['body']
-    payload = body['payload']
-    # turn 'k=v&k=v' into {'k': 'v', 'k': 'v'}
-    json_data = {}
-    urlparams = payload.split('&')
-    for param in urlparams:
-        key, value = param.split('=', 1)
-        # urldecode
-        json_data[key] = unquote(value)
-    cid = json_data['cid']
+    if 'payload' in body:
+        payload = body['payload']
+        print('is_payload')
+        # turn 'k=v&k=v' into {'k': 'v', 'k': 'v'}
+        json_data = {}
+        urlparams = payload.split('&')
+        for param in urlparams:
+            try:
+                key, value = param.split('=', 1)
+            except:
+                key, value = param, ''
+            # urldecode
+            json_data[key] = unquote(value)
+        cid = json_data['cid']
+    else:
+        print('is_cookie')
+        json_data = body
+        cid = data['hashedUrl']
     # modify all tasks with the same cid
     for _, task in tasks.items():
         if task['cid'] == cid:
@@ -180,4 +237,4 @@ async def response(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=API_PORT)

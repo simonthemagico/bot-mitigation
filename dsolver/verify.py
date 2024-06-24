@@ -6,9 +6,10 @@ import traceback
 import urllib
 import tls_client
 import requests
+from urllib.parse import quote
 
 host_api_url = 'http://localhost:8000'
-ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 randomLang = "de-DE,de;q=0.9"
 
 
@@ -28,6 +29,7 @@ smartbalance2.com:49998:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
 smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw""".splitlines()
         proxy = random.choice(proxies)
         proxy = proxy.split(':')
+        print(proxy)
         session.proxies = {'https': f'http://{proxy[2]}:{proxy[3]}@{proxy[0]}:{proxy[1]}',
                            'http': f'http://{proxy[2]}:{proxy[3]}@{proxy[0]}:{proxy[1]}'}
 
@@ -50,7 +52,7 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
         response = session.get(url, headers=request_headers)
 
         if response.status_code != 200:
-
+            assert '/i.js', "Not Interstitial"
             # print(response.text)
             print(response)
         else:
@@ -74,42 +76,44 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
                 request to get the interstitial html
             """
             old_cookie = session.cookies.get('datadome')
-            target_url = main_url
-            redirect = build_url(response.text, old_cookie, target_url)
+            redirect = build_url(response.text, old_cookie, main_url)
             print(redirect)
-
+        assert '/captcha/' in redirect, "Not Captcha"
         """ This part is getting the interstitial payload
         """
         payload = get_datadome_payload(redirect, old_cookie)
-        payload['referer'] = url
-        payload['dm'] = 'cd'
-        headers = {
-            "Host": "geo.captcha-delivery.com",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Accept": "*/*",
-            "Origin": "https://geo.captcha-delivery.com",
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Dest": "empty",
-            "Accept-Encoding": "gzip, deflate, br, zstd",
-            "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"
-        }
-        url = 'https://geo.captcha-delivery.com/interstitial/'
-        """ posting payload from api to interstitial endpoint
-        """
+        if payload.get('payload'):
+            payload['referer'] = main_url
+            payload['dm'] = 'cd'
+            headers = {
+                "Host": "geo.captcha-delivery.com",
+                "User-Agent": ua,
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "Accept": "*/*",
+                "Origin": "https://geo.captcha-delivery.com",
+                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Dest": "empty",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"
+            }
+            url = 'https://geo.captcha-delivery.com/interstitial/'
+            """ posting payload from api to interstitial endpoint
+            """
 
-        res = session.post(url, headers=headers, data=payload)
+            res = session.post(url, headers=headers, data=payload)
 
-        print(res)
+            print(res)
 
-        print('generated dd cookie')
+            print('generated dd cookie')
 
-        response = json.loads(res.text)
+            response = json.loads(res.text)
+        else:
+            response = payload
         cookie = response['cookie'].split('; ')[0].split('=')[1]
-
         """ setting the cookie
         """
+        print(response)
         session.cookies.set(name='datadome', value=cookie, domain='.seloger.com', path='/')
 
         url = main_url
@@ -163,7 +167,6 @@ def get_datadome_payload(curl, cid):
         res = requests.post(url, headers=headers, json=payload)
         response = json.loads(res.text)
         if response['status'] == 'ready':
-            print(response)
             return response['value']
         if response['status'] == 'error':
             raise Exception('Failed to get payload')
@@ -179,31 +182,32 @@ def build_url(script, old_cookie, url):
     :param url:
     :return redirect url:
     """
-    data = script.split('var dd=')[1].split('</script')[0]
-    data = json.dumps(data)
-
-    cid = data.split("'cid':'")[1].split("'")[0]
-
-    hsh = data.split("'hsh':'")[1].split("'")[0]
-    referer = url
-    try:
-        e_value = data.split("'e':'")[1].split("',")[0]
-    except:
-        e_value = data.split("'b':")[1].split(",")[0]
-    s_value = data.split("'s':")[1].split(",")[0]
+    data = script.split('var dd=')[1].split('</script')[0].strip().replace("'", '"')
+    data: dict = json.loads(data)
 
     params = {
-        'initialCid': cid,
-        'hash': hsh,
+        'initialCid': data['cid'],
+        'hash': data['hsh'],
         'cid': old_cookie,
-        'referer': referer,
-        's': s_value,
-        'b': e_value,
+        'referer': url,
+        's': data['s'],
         'dm': 'cd'
     }
+    if data['rt'] == 'i':
+        params.update({
+            'b': data['b'],
+        })
+    if data['rt'] == 'c':
+        params.update({
+            't': data['t'],
+            'e': data['e'],
+        })
 
+    if data.get('cp') and data['cp']['name'] and data['cp']['value']:
+        params[data['cp']['name']] = data['cp']['value']
+    endpoint = 'captcha' if data['rt'] == 'c' else 'interstitial'
     params = urllib.parse.urlencode(params, doseq=True)
-    redirect = f'https://geo.captcha-delivery.com/interstitial/?{params}'
+    redirect = f'https://{data["host"]}/{endpoint}/?{params}'
 
     return redirect
 
