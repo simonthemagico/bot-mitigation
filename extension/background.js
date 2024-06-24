@@ -6,7 +6,6 @@ let imageUrls = [];
 let apiPort = 8001;
 let frameIds = []; // Store frameIds of interest
 let state = 'idle';
-let is_sent = false;
 
 
 // on install
@@ -58,7 +57,7 @@ chrome.webRequest.onBeforeRequest.addListener(
         console.log('Request started: ', details.url);
         if (details.url.includes('/captcha/check') || details.url.includes('/interstitial/'))
             chrome.storage.session.get(['captchaUrl']).then((data) => {
-                captchaUrl = data.captchaUrl || captchaUrl || details.url;
+                captchaUrl = data.captchaUrl || captchaUrl;
             });
         if(details.url.includes('&t=bv&'))
             return sendToApi("blocked");
@@ -88,11 +87,6 @@ chrome.webRequest.onBeforeRequest.addListener(
                 console.error('Error getting request body: ', error);
             }
             console.log('Interstitial Captcha: ');
-        }
-        if (details.url.includes('/captcha/check')) {
-            let params = new URLSearchParams(details.url);
-            urlHash = params.get('cid');
-            sendToApi(params, true);
         }
         // save image urls in the global variable if ends with .png or .jpg
         if (details.url.endsWith('.png') || details.url.endsWith('.jpg')) {
@@ -134,8 +128,6 @@ function retryAndCallApi(hash, currentUrl) {
 }
 
 function callToApi(hash, currentUrl, response){
-    if (is_sent) return;
-    is_sent = true;
     chrome.storage.session.get(['apiPort']).then((data) => {
         apiPort = data.apiPort || apiPort;
         fetch(`http://localhost:${apiPort}/v1/response`, {
@@ -151,15 +143,6 @@ function callToApi(hash, currentUrl, response){
 function sendToApi(currentUrl, is_payload = false){
     chrome.storage.session.get(['hash']).then((data) => {
         let hash = data.hash || urlHash;
-        // using regex, find cid=.+& if no hash found
-        if (!hash) {
-            let hashMatch = currentUrl.match(/cid=.+&/);
-            if (hashMatch) {
-                hash = hashMatch[0];
-                hash = hash.replace('cid=', '');
-                hash = hash.replace('&', '');
-            }
-        }
         console.log('Hash: ', hash);
         console.log('url: ', currentUrl);
         if (currentUrl.includes('/captcha/check'))
@@ -210,7 +193,7 @@ chrome.webRequest.onCompleted.addListener(
             sendToApi(details.url);
         }
         console.log('Request completed: ', details.url);
-        if (imageUrls.length === 2 && state === 'idle') {
+        if (imageUrls.length === 2 && frameIds.length > 0 && state === 'idle') {
             state = 'processing';
             console.log('Image urls: ', imageUrls);
             let bgImageUrl = imageUrls.find(url => !url.includes('.frag.'));
@@ -238,9 +221,6 @@ function sendMessageToIframe(message) {
         files: ['content.js']
     }).then(() => {
         console.log('Script executed in all frames');
-        try {
-            chrome.tabs.sendMessage(currentTab, message);
-        }catch (error) {}
         frameIds.forEach(frame => {
             chrome.tabs.sendMessage(frame.tabId, message, {frameId: frame.frameId});
         });
@@ -290,7 +270,6 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
         if (request.apiPort){
             console.log('API Port: ', request.apiPort);
             chrome.storage.session.set({apiPort: request.apiPort});
-            apiPort = request.apiPort;
         }
         let home_url = request.home_url;
         captchaUrl = request.url;
