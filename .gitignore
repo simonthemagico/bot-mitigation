@@ -4,3 +4,4 @@ datadome-solve-api/fingerprints/*
 !datadome-solve-api/fingerprints/.keep
 datadome-solve-api/.sentry-native
 dsolver/files/*
+user-data-dir/
