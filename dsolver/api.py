@@ -16,13 +16,14 @@ if not os.path.exists(current_dir + '/files'):
     os.makedirs(current_dir + '/files')
 
 previous_dir = os.path.dirname(current_dir)
+tasks = {}
 
 app = FastAPI()
 
 port = random.randint(9222, 9322)
 # add extension ../extension
 print(previous_dir)
-os.system(f'"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --remote-debugging-port={port} --load-extension={previous_dir}/extension &')
+os.system(f'"/usr/bin/google-chrome-stable" --remote-debugging-port={port} --load-extension={previous_dir}/extensionv2 --user-data-dir={previous_dir}/user-data-dir &')
 
 # A simple method to create a browser tab and navigate to a URL
 def create_browser_tab(url):
@@ -35,17 +36,6 @@ def create_browser_tab(url):
     tab.wait(5)  # Wait for 5 seconds for the page to load
     return tab, browser
 
-def process(task_id):
-    url = f"http://localhost:{API_PORT}/task-" + task_id
-    tab, browser = create_browser_tab(url)
-    task = tasks[task_id]
-    for _ in range(10):
-        if task['status'] == 'ready':
-            break
-        tab.wait(1)
-    tab.stop()
-    browser.close_tab(tab)
-
 def process_url(task_id):
     task = tasks[task_id]
     url = task['url']
@@ -57,62 +47,6 @@ def process_url(task_id):
     tab.stop()
     browser.close_tab(tab)
 
-tasks = {}
-
-
-@app.get("/storePort")
-async def redirect(extensionId: str, captcha_url: str, hash_url: str):
-    html = f"""
-    <html>
-        <head>
-            <script>
-            function Redirect() {{
-                // save hash to sessionStorage
-                chrome.runtime.sendMessage("{extensionId}", {{
-                    message: "storeHash",
-                    apiPort: {API_PORT},
-                    hash: "{hash_url}",
-                    url: "{captcha_url}"
-                }});
-            }}
-            setTimeout(Redirect, 1000);
-            </script>
-        </head>
-        <body onload="Redirect()">
-            Redirecting...
-            <div>
-                <a href="{captcha_url}">Click here if you are not redirected</a>
-            </div>
-        </body>
-    </html>
-    """
-    return Response(content=html, media_type="text/html")
-
-# verify by script
-@app.post("/post-payload")
-async def post_datadome(request: Request):
-    data = await request.json()
-    script = data['script']
-    task_id = str(uuid4())
-    cid = data['cid']
-
-    tasks[task_id] = {
-        'status': 'pending',
-        'value': None,
-        'cid': cid,
-    }
-    # save the payload to a file with the task_id as the filename
-    with open(f'{current_dir}/files/{cid}.html', 'w') as f:
-        f.write(script)
-
-    # open a new thread to process the payload
-    t = threading.Thread(target=process, args=(task_id,))
-    t.start()
-
-    tasks[task_id]['status'] = 'processing'
-    return {
-        'task_id': task_id,
-    }
 
 # verify by url
 @app.post("/verify-browser")
@@ -120,9 +54,8 @@ async def verify_browser(request: Request):
     data = await request.json()
     url = data['url']
     cid = data['cid']
+    print(cid)
     task_id = str(uuid4())
-    if '/captcha/' in  url:
-        url = f'http://localhost:{API_PORT}/storePort?extensionId=enhdnjlcnmhiplinedcodcalnmpkejej&hash_url={cid}&captcha_url=' + quote(url)
     tasks[task_id] = {
         'status': 'pending',
         'value': None,
@@ -170,65 +103,25 @@ def get_task(task_id: str):
     # render the html
     return Response(content=script, media_type="text/html")
 
-@app.post("/interstitial/")
-async def interstitial(request: Request):
-    # application/x-www-form-urlencoded; charset=UTF-8
-    data = await request.form()
-    cid = data['cid']
-    json_data = {}
-    for key, value in data.items():
-        json_data[key] = value
-    # modify all tasks with the same cid
-    for _, task in tasks.items():
-        if task['cid'] == cid:
-            task['value'] = json_data
-            task['status'] = 'ready'
-    # remove file
-    try:
-        os.remove(f'{current_dir}/files/{cid}.html')
-    except:
-        pass
-    return {
-        "cookie": "datadome=" + cid + ';'
-    }
-
-@app.get("/captcha/check")
-async def interstitial(request: Request):
-    # get params ?cid=123&k=v
-    params: str = request.query_params
-    cid = params['cid']
-    # modify all tasks with the same cid
-    for _, task in tasks.items():
-        if task['cid'] == cid:
-            task['value'] = params
-            task['status'] = 'ready'
-    # remove file
-    return {
-        "cookie": "datadome=" + cid + ';'
-    }
-
 @app.post("/v1/response")
 async def response(request: Request):
     data = await request.json()
     body = data['body']
-    if 'payload' in body:
-        payload = body['payload']
-        print('is_payload')
-        # turn 'k=v&k=v' into {'k': 'v', 'k': 'v'}
-        json_data = {}
-        urlparams = payload.split('&')
-        for param in urlparams:
-            try:
-                key, value = param.split('=', 1)
-            except:
-                key, value = param, ''
-            # urldecode
-            json_data[key] = unquote(value)
-        cid = json_data['cid']
-    else:
-        print('is_cookie')
-        json_data = body
-        cid = data['hashedUrl']
+    payload = body['payload']
+    print('is_payload')
+    # turn 'k=v&k=v' into {'k': 'v', 'k': 'v'}
+    json_data = {}
+    urlparams = payload.split('&')
+    for param in urlparams:
+        try:
+            key, value = param.split('=', 1)
+        except:
+            key, value = param, ''
+        # urldecode
+        json_data[key] = unquote(value)
+    print(json_data)
+    cid = data['hashedUrl']
+    print(cid)
     # modify all tasks with the same cid
     for _, task in tasks.items():
         if task['cid'] == cid:

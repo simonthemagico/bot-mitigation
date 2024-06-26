@@ -6,10 +6,9 @@ import traceback
 import urllib
 import tls_client
 import requests
-from urllib.parse import quote
 
 host_api_url = 'http://localhost:8000'
-ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 randomLang = "de-DE,de;q=0.9"
 
 
@@ -78,42 +77,47 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
             old_cookie = session.cookies.get('datadome')
             redirect = build_url(response.text, old_cookie, main_url)
             print(redirect)
-        assert '/captcha/' in redirect, "Not Captcha"
         """ This part is getting the interstitial payload
         """
         payload = get_datadome_payload(redirect, old_cookie)
+        headers = {
+            "Host": "geo.captcha-delivery.com",
+            "User-Agent": ua,
+            "Accept": "*/*",
+            "Origin": "https://geo.captcha-delivery.com",
+            "Sec-Fetch-Site": "same-origin",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Dest": "empty",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"
+        }
+        print(payload)
         if payload.get('payload'):
             payload['referer'] = main_url
             payload['dm'] = 'cd'
-            headers = {
-                "Host": "geo.captcha-delivery.com",
-                "User-Agent": ua,
-                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                "Accept": "*/*",
-                "Origin": "https://geo.captcha-delivery.com",
-                "Sec-Fetch-Site": "same-origin",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Dest": "empty",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
-                "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"
-            }
             url = 'https://geo.captcha-delivery.com/interstitial/'
             """ posting payload from api to interstitial endpoint
             """
 
             res = session.post(url, headers=headers, data=payload)
 
-            print(res)
-
-            print('generated dd cookie')
-
-            response = json.loads(res.text)
         else:
-            response = payload
+            payload['payload'] = main_url
+            url = 'https://geo.captcha-delivery.com/captcha/check/'
+            """ posting payload from api to captcha endpoint
+            """
+
+            res = session.get(url, headers=headers, params=payload)
+
+        print(res)
+
+        print('generated dd cookie')
+        print(res.text)
+        response = json.loads(res.text)
+
         cookie = response['cookie'].split('; ')[0].split('=')[1]
         """ setting the cookie
         """
-        print(response)
         session.cookies.set(name='datadome', value=cookie, domain='.seloger.com', path='/')
 
         url = main_url
