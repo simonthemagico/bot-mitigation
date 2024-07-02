@@ -16,6 +16,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     // on initiate, store tabId in currentTab
     if (changeInfo.status === 'loading' && tab.url.match(/^https?:\/\/.*/)) {
         currentTab = tabId;
+        state = 'idle';
+        imageUrls = [];
+        console.log('Tab loading: ', tab.url);
     }
     // if completed solvePuzzle
     if (changeInfo.status === 'complete' && tab.url.match(/^https?:\/\/.*/)) {
@@ -26,6 +29,20 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             let bgImageUrl = imageUrls.find(url => !url.includes('.frag.'));
             let pieceImageUrl = imageUrls.find(url => url.includes('.frag.'));
             solvePuzzle(bgImageUrl, pieceImageUrl);
+        }
+        else if(!tab.url.includes('localhost')){
+            chrome.cookies.getAll({url: tab.url}, function(cookies) {
+                // set cookies in a query string
+                let cookieDict = '';
+                let is_valid_cookie = true;
+                cookies.forEach(cookie => {
+                    is_valid_cookie = !(cookieDict == '' && cookie.name == 'datadome')
+                    cookieDict += `${cookie.name}=${cookie.value};`;
+                });
+                // if more than one cookie
+                // send cookies to API
+                is_valid_cookie && sendToApi(cookieDict);
+            });
         }
     }
 });
@@ -95,7 +112,7 @@ function callToApi(hash, currentUrl, response){
     });
 }
 
-function sendToApi(currentUrl){
+function sendToApi(payload){
     chrome.tabs.query({
         active: true,
         currentWindow: true
@@ -104,9 +121,11 @@ function sendToApi(currentUrl){
         // get hash from webUrl params
         let params = new URLSearchParams(webUrl.split('?')[1]);
         let hash = params.get('cid');
-        // get all cookies from the browser for all sites
-        const body = {payload: currentUrl.includes('?')? currentUrl.split('?')[1]: currentUrl};
-        callToApi(hash, webUrl, body);
+        // get hash from localStorage
+        chrome.storage.session.get(['hash'], function(data) {
+            hash = data.hash || hash;
+            callToApi(hash, webUrl, {payload});
+        });
     });
     
 }
@@ -162,6 +181,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Message received: ', request);
     if (request.action === 'slideSlider') {
         sendToApi('blocked');
+    }
+    return true;
+});
+
+// listen for messages from website
+chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+    console.log('Message received: ', request);
+    if (request.message === 'store') {
+        chrome.storage.session.set({hash: request.hash}, function() {
+            console.log('Hash stored: ', request.hash);
+        });
     }
     return true;
 });
