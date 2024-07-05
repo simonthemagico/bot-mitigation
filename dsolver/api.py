@@ -1,7 +1,5 @@
 import json
-from restrict_by_host_upstream import RestrictHostUpstream
-from proxy.plugin import ProxyPoolPlugin
-from proxy import Proxy
+import signal
 
 import subprocess
 import time
@@ -12,6 +10,7 @@ import threading
 import pychrome
 from urllib.parse import unquote, urlparse
 import tempfile
+import platform
 
 API_PORT = 8000
 
@@ -23,9 +22,13 @@ if not os.path.exists(current_dir + '/files'):
 
 previous_dir = os.path.dirname(current_dir)
 
+CHROME_PATH = '/usr/bin/google-chrome-stable'
+if platform.system() == 'Darwin':
+    CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+
 CHROME_PORT = 9222
 # add extension ../extension
-os.system(f'"/usr/bin/google-chrome-stable" --remote-debugging-port={CHROME_PORT} --load-extension={previous_dir}/extensionv2 --user-data-dir={previous_dir}/user-data-dir &')
+os.system(f'"{CHROME_PATH}" --remote-debugging-port={CHROME_PORT} --load-extension={previous_dir}/extensionv2 --user-data-dir={previous_dir}/user-data-dir &')
 
 tasks = {}
 
@@ -61,20 +64,24 @@ def create_browser_tab(url, cid, port, extensions):
     return tab, browser
 
 def get_installed_extensions(user_data_dir):
-    preferences_path = os.path.join(user_data_dir, 'Default', 'Preferences')
-    print(preferences_path)
-    # Wait until the Preferences file is created
-    max_wait_time = 20  # seconds
-    start_time = time.time()
-    while not os.path.exists(preferences_path):
-        if time.time() - start_time > max_wait_time:
-            raise FileNotFoundError(f"Preferences file not found in {max_wait_time} seconds.")
-        time.sleep(1)
-    
-    with open(preferences_path, 'r') as file:
-        preferences = json.load(file)
-    
-    extensions = preferences.get('extensions', {}).get('settings', {})
+    for prefix in ['', 'Secure ']:
+        preferences_path = os.path.join(user_data_dir, 'Default', f'{prefix}Preferences')
+        print(preferences_path)
+        # Wait until the Preferences file is created
+        max_wait_time = 20  # seconds
+        start_time = time.time()
+        while not os.path.exists(preferences_path):
+            if time.time() - start_time > max_wait_time:
+                raise FileNotFoundError(f"Preferences file not found in {max_wait_time} seconds.")
+            time.sleep(1)
+
+        with open(preferences_path, 'r') as file:
+            preferences = json.load(file)
+
+        extensions = preferences.get('extensions', {}).get('settings', {})
+        if extensions:
+            break
+    assert extensions, "No extensions found in Preferences file"
     installed_extensions = []
 
     for ext_id, ext_info in extensions.items():
@@ -86,7 +93,7 @@ def get_installed_extensions(user_data_dir):
                     'id': ext_id,
                     'name': extension_name
                 })
-    
+
     return installed_extensions
 
 def handle_captcha(url, cid, port, extensions, task):
@@ -117,30 +124,22 @@ def process_url(task_id, cid, proxy):
             break
         if port > 9322:
             raise Exception('No open ports found')
-    
-    with Proxy([
-        # '--log-level',
-        # 'd',
-        '--proxy-pool',
-        proxy,
-        '--port',
-        str(port-1000),
-        '--filtered-client-ips-mode',
-        'whitelist',
-        '--restrict-by-host-upstream',
-        '.*(seloger|datadome|captcha-delivery).*'
-    ], plugins=[
-        RestrictHostUpstream,
-        ProxyPoolPlugin,
-    ]) as p:
+    print("Using port", port)
+    proxy_command = [
+        'proxy',
+        '--proxy-pool', proxy,
+        '--port', str(port-1000),
+        '--plugins', 'restrict_by_host_upstream.RestrictHostUpstream,proxy.plugin.ProxyPoolPlugin',
+        '--restrict-by-host-upstream', '.*(seloger|datadome|captcha-delivery).*',
+    ]
+    process = subprocess.Popen(proxy_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
         commands = [
-            '/usr/bin/google-chrome-stable',
+            CHROME_PATH,
             f'--remote-debugging-port={port}',
             f'--load-extension={previous_dir}/extensionv2',
             f'--user-data-dir={tmpdirname}',
             f'--proxy-server=http://127.0.0.1:{port-1000}',
-            # '--log-level=3',
-            '--no-sandbox',
             '--no-first-run',
             '--no-default-browser-check',
             '--disable-default-apps',
@@ -157,6 +156,13 @@ def process_url(task_id, cid, proxy):
         finally:
             print('killing process')
             p.kill()
+        if process.poll() is None:
+            os.kill(process.pid, signal.SIGINT)
+            process.communicate()
+    finally:
+        print('terminating process')
+        process.terminate()
+        process.wait()
     os.system(f'rm -rf {tmpdirname}')
 
 # hash=value&hash=value

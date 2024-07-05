@@ -17,6 +17,10 @@ from proxy.http.parser import HttpParser
 from proxy.common.utils import text_
 from proxy.http.exception import HttpRequestRejected
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 flags.add_argument(
     '--restrict-by-host-upstream',
@@ -32,9 +36,15 @@ class RestrictHostUpstream(HttpProxyBasePlugin):
     def before_upstream_connection(
             self, request: HttpParser,
     ) -> Optional[HttpParser]:
-        if not re.match(self.flags.restrict_by_host_upstream, text_(request.host)):
+        match = re.match(self.flags.restrict_by_host_upstream, text_(request.host))
+        if not match:
             raise HttpRequestRejected(
                 status_code=httpStatusCodes.I_AM_A_TEAPOT,
                 reason=b'I\'m a tea pot',
             )
         return request
+
+
+__all__ = [
+    'RestrictHostUpstream',
+]
