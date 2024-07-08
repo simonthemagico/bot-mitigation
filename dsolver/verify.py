@@ -36,7 +36,7 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
         session.proxies = {'https': f'http://{proxy[2]}:{proxy[3]}@{proxy[0]}:{proxy[1]}',
                            'http': f'http://{proxy[2]}:{proxy[3]}@{proxy[0]}:{proxy[1]}'}
 
-        main_url = 'https://www.seloger.com/list.htm?projects=2&types=2,1,9&natures=1&places=[{"subDivisions":["75"]},{"subDivisions":["92"]}]&price=140000/NaN&surface=14/NaN&sort=d_dt_crea&mandatorycommodities=0&picture=15&enterprise=0&epc=E,D,C,B,A,F,G&qsVersion=1.0&m=search_refine-redirection-search_results'
+        main_url = 'https://www.seloger.com'
 
         url = main_url
 
@@ -105,7 +105,7 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
             "Accept-Encoding": "gzip, deflate, br, zstd",
             "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"
         }
-        
+        print(payload)
         if isinstance(payload, dict):
             if 'blocked' in payload:
                 print('blocked')
@@ -123,7 +123,7 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
                 class Response:
                     def __init__(self, text):
                         datadome = text['datadome']
-                        self.text = f'{{"cookie":"datadome={datadome}; path=/; domain=.seloger.com"}}'
+                        self.text = f'{{"cookie":"datadome={datadome}"}}'
                     def __str__(self):
                         return "<Response [200]>"
                 res = Response(payload)

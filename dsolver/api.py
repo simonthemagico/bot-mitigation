@@ -266,7 +266,9 @@ async def response(request: Request):
             except:
                 key, value = param, ''
             # urldecode
-            json_data[key] = unquote(value)
+            if not key.strip():
+                continue
+            json_data[key.strip()] = unquote(value.strip())
     cid = data['hashedUrl'] or ''
     # modify all tasks with the same cid
     for _, task in tasks.items():

