@@ -1,5 +1,6 @@
 // background.js
 let currentTab;
+let currentHttpStatus = 200;
 let imageUrls = [];
 let apiPort = 8000;
 let state = 'idle';
@@ -31,12 +32,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             solvePuzzle(bgImageUrl, pieceImageUrl);
         }
         else if(!tab.url.includes('localhost')){
-            sendCookies(tab.url);
+            sendCookies(tab.url, tabId);
         }
     }
 });
 
-function sendCookies(url, retries = 0) {
+function sendCookies(url, tabId, retries = 0) {
     chrome.cookies.getAll({}, function(cookies) {
         // set cookies in a query string
         let cookieDict = [];
@@ -53,15 +54,28 @@ function sendCookies(url, retries = 0) {
             sendToApi(cookieString);
         }
         else if (retries >= 3) {
-            sendToApi('no-cookies for ' + url);
+            let reasonString = 'reason=no_cookies';
+            let quoted_url = encodeURIComponent(url);
+            reasonString += `&url=${quoted_url}`;
+            reasonString += `&status=${currentHttpStatus}`;
+            sendToApi(reasonString);
         }
         else {
             setTimeout(() => {
-                sendCookies(url, retries + 1);
+                sendCookies(url, tabId, retries + 1);
             }, 2000);
         }
     })
 }
+chrome.webRequest.onCompleted.addListener(
+    function(details) {
+        if (details.initiator && details.initiator.includes('chrome-extension'))return;
+        if (details.tabId != currentTab)return;
+        currentHttpStatus = details.statusCode;
+        console.log('Request completed: ', details.url);
+    }
+    , { urls: ["<all_urls>"] }
+);
 
 chrome.webRequest.onBeforeRequest.addListener(
     function(details) {
