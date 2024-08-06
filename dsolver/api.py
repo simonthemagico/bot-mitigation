@@ -105,11 +105,13 @@ def handle_captcha(url, cid, port, extensions, task):
             tab.wait(1)
         if task['status'] != 'ready':
             task['status'] = 'error'
+            task['value'] = 'timeout'
         tab.stop()
         browser.close_tab(tab)
     except Exception as e:
         print(e)
         task['status'] = 'error'
+        task['value'] = str(e)
         raise e
 
 def process_url(task_id, cid, proxy):
