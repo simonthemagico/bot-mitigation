@@ -4,7 +4,7 @@ import time
 import traceback
 import urllib
 import urllib.parse
-import tls_client
+from curl_cffi.requests import Session
 import requests
 import platform
 
@@ -13,30 +13,30 @@ host_api_url = 'http://localhost:8000'
 ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 randomLang = "de-DE,de;q=0.9"
 if platform.system() == 'Darwin':
-    ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
+    ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
 
 
 
 def get_datadome_flow():
     try:
-        session = tls_client.Session(client_identifier='chrome_120', random_tls_extension_order=True)
-        proxies = """smartbalance2.com:49990:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
-smartbalance2.com:49991:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
-smartbalance2.com:49992:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
-smartbalance2.com:49993:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
-smartbalance2.com:49994:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
-smartbalance2.com:49995:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
-smartbalance2.com:49996:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
-smartbalance2.com:49997:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
-smartbalance2.com:49998:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
-smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw""".splitlines()
+        session = Session(impersonate='chrome120')
+        proxies = """fr.smartproxy.com:49990:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
+fr.smartproxy.com:49991:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
+fr.smartproxy.com:49992:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
+fr.smartproxy.com:49993:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
+fr.smartproxy.com:49994:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
+fr.smartproxy.com:49995:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
+fr.smartproxy.com:49996:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
+fr.smartproxy.com:49997:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
+fr.smartproxy.com:49998:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw
+fr.smartproxy.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw""".splitlines()
         proxy = random.choice(proxies)
         proxy = proxy.split(':')
         print(proxy)
         session.proxies = {'https': f'http://{proxy[2]}:{proxy[3]}@{proxy[0]}:{proxy[1]}',
                            'http': f'http://{proxy[2]}:{proxy[3]}@{proxy[0]}:{proxy[1]}'}
 
-        main_url = 'https://www.seloger.com'
+        main_url = 'https://www.leboncoin.fr/recherche?text=ikea&pi=919278d4-2899-49bb-af9a-6a76de1cf59c'
 
         url = main_url
 
@@ -46,10 +46,10 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
             'cache-control': 'max-age=0',
             'priority': 'u=0, i',
             'sec-ch-device-memory': '8',
-            'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+            'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="128", "Google Chrome";v="128"',
             'sec-ch-ua-arch': '"x86"',
-            'sec-ch-ua-full-version-list': '"Not/A)Brand";v="8.0.0.0", "Chromium";v="126.0.0.0", "Google Chrome";v="126.0.0.0"',
-            'sec-ch-ua-platform': '"Linux"',
+            'sec-ch-ua-full-version-list': '"Not/A)Brand";v="8.0.0.0", "Chromium";v="128.0.0.0", "Google Chrome";v="128.0.0.0"',
+            'sec-ch-ua-platform': '"macOs"',
             'sec-fetch-dest': 'document',
             'sec-fetch-mode': 'navigate',
             'sec-fetch-site': 'none',
@@ -90,6 +90,7 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
         """
         if '/captcha' in redirect:
             redirect = main_url
+        print(old_cookie)
         start_time = time.time()
         payload = get_datadome_payload(redirect, old_cookie, f'{proxy[2]}:{proxy[3]}@{proxy[0]}:{proxy[1]}')
         end_time = time.time()
@@ -142,7 +143,7 @@ smartbalance2.com:49999:user-sp0e9f6467-sessionduration-30:EWXv1a50bXfxc3vnsw"""
         cookie = response['cookie'].split('; ')[0].split('=')[1]
         """ setting the cookie
         """
-        session.cookies.set(name='datadome', value=cookie, domain='.seloger.com', path='/')
+        session.cookies.set(name='datadome', value=cookie, domain='.leboncoin.fr', path='/')
 
         url = main_url
         # checking if cookie is valid

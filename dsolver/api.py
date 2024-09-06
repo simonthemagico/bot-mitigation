@@ -32,6 +32,13 @@ os.system(f'"{CHROME_PATH}" --remote-debugging-port={CHROME_PORT} --load-extensi
 
 tasks = {}
 
+allowed_hosts = [
+    'leboncoin',
+    'seloger',
+    'datadome',
+    'captcha-delivery',
+]
+
 app = FastAPI()
 
 def get_new_tab(browser):
@@ -127,12 +134,15 @@ def process_url(task_id, cid, proxy):
         if port > 9322:
             raise Exception('No open ports found')
     print("Using port", port)
+
+    task = tasks[task_id]
+    url = task['url']
     proxy_command = [
         'proxy',
         '--proxy-pool', proxy,
         '--port', str(port-1000),
         '--plugins', 'restrict_by_host_upstream.RestrictHostUpstream,proxy.plugin.ProxyPoolPlugin',
-        '--restrict-by-host-upstream', '.*(seloger|datadome|captcha-delivery).*',
+        '--restrict-by-host-upstream', '.*('+"|".join(allowed_hosts)+').*',
     ]
     process = subprocess.Popen(proxy_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
@@ -147,8 +157,6 @@ def process_url(task_id, cid, proxy):
             '--disable-default-apps',
         ]
         p = subprocess.Popen(commands, start_new_session=True)
-        task = tasks[task_id]
-        url = task['url']
         try:
             extensions = get_installed_extensions(tmpdirname)
             handle_captcha(url, cid, port, extensions, task)
