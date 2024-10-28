@@ -37,6 +37,9 @@ allowed_hosts = [
     'seloger',
     'datadome',
     'captcha-delivery',
+    'yelp',
+    'idealista',
+    'leclerc'
 ]
 
 app = FastAPI()
@@ -203,6 +206,13 @@ def render(request: Request):
 @app.post("/verify-browser")
 async def verify_browser(request: Request):
     data = await request.json()
+    required_fields = ['url', 'cid', 'proxy']
+    if not all(field in required_fields for field in data):
+        return {
+           "error": "MISSING_PARAMETER",
+           "message": f"Missing Field found",
+           "required": required_fields
+        }
     url = data['url']
     cid = data['cid']
     proxy = data['proxy']
