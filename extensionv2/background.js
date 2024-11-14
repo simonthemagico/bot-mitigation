@@ -38,20 +38,19 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 function sendCookies(url, tabId, retries = 0) {
+    console.log('Sending cookies');
     chrome.cookies.getAll({}, function(cookies) {
         // set cookies in a query string
-        let cookieDict = [];
-        let is_valid_cookie = true;
+        let ddCookie = null;
         cookies.forEach(cookie => {
-            is_valid_cookie = !(cookieDict == '' && cookie.name == 'datadome');
-            let cookie_value = `${cookie.name}=${cookie.value}; domain=${cookie.domain}; path=${cookie.path};`;
-            cookieDict.push(cookie_value);
+            if (cookie.name == 'datadome') {
+                ddCookie = `${cookie.name}=${cookie.value}${cookie.secure ? '; Secure' : ''}; Domain=${cookie.domain}; Path=${cookie.path}`;
+            }
         });
+        console.log('Cookies: ', ddCookie);
         // if more than one cookie
-        is_valid_cookie = is_valid_cookie && cookieDict.length > 1;
-        if (is_valid_cookie && retries < 3) {
-            let cookieString = cookieDict.join('&');
-            sendToApi(cookieString);
+        if (ddCookie && retries < 3) {
+            sendToApi(ddCookie);
         }
         else if (retries >= 3) {
             let reasonString = 'reason=no_cookies';
@@ -93,7 +92,6 @@ chrome.webRequest.onBeforeRequest.addListener(
             // get request body
         if (details.url == 'https://geo.captcha-delivery.com/interstitial/') {
             try{
-                apiPort = 8000;
                 let requestBody = details.requestBody;
                 if (requestBody.raw) {
                     let decodedString = String.fromCharCode.apply(
@@ -222,6 +220,12 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
         chrome.storage.session.set({hash: request.hash}, function() {
             console.log('Hash stored: ', request.hash);
         });
+        if (request.apiPort) {
+            apiPort = request.apiPort;
+            chrome.storage.session.set({apiPort: apiPort}, function() {
+                console.log('API port stored: ', apiPort);
+            });
+        }
     }
     return true;
 });

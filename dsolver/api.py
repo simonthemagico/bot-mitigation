@@ -1,208 +1,35 @@
-import json
-import signal
-
-import subprocess
-import time
-from fastapi import FastAPI, Request, Response
-from uuid import uuid4
 import os
 import threading
-import pychrome
-from urllib.parse import unquote, urlparse
-import tempfile
-import platform
 
-API_PORT = 8000
+from urllib.parse import unquote
+from uuid import uuid4
+from fastapi import FastAPI, Request, Response
 
+from tasks import tasks, process_url, handle_captcha
+from config import CHROME_PATH, CHROME_PORT, API_PORT, previous_dir
+from utils import fix_proxy
 
-# create files/ directory if it doesn't exist
-current_dir = os.path.dirname(os.path.realpath(__file__))
-if not os.path.exists(current_dir + '/files'):
-    os.makedirs(current_dir + '/files')
-
-previous_dir = os.path.dirname(current_dir)
-
-CHROME_PATH = '/usr/bin/google-chrome-stable'
-if platform.system() == 'Darwin':
-    CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-
-CHROME_PORT = 9222
-# add extension ../extension
 os.system(f'"{CHROME_PATH}" --remote-debugging-port={CHROME_PORT} --load-extension={previous_dir}/extensionv2 --user-data-dir={previous_dir}/user-data-dir &')
-
-tasks = {}
-
-allowed_hosts = [
-    'leboncoin',
-    'seloger',
-    'datadome',
-    'captcha-delivery',
-    'yelp',
-    'idealista',
-    'leclerc'
-]
-
 app = FastAPI()
 
-def get_new_tab(browser):
-    tab = browser.new_tab()
-    tab.start()
-    tab.call_method("Network.enable")
-    tab.call_method("Page.enable")
-    tab.call_method("Network.clearBrowserCookies")
-    return tab
-
-# add extension ../extension
-# A simple method to create a browser tab and navigate to a URL
-def create_browser_tab(url, cid, port, extensions):
-    url_obj = urlparse(url)
-    browser = pychrome.Browser(url=f"http://127.0.0.1:{port}")
-    if 'captcha-delivery' not in url_obj.hostname:
-        tab = get_new_tab(browser)
-        render_url = f'http://localhost:{API_PORT}/render?extension_id={extensions[0]["id"]}&hash={cid}'
-        tab.call_method("Page.navigate", url=render_url, _timeout=5)
-        tab.wait(2)
-        tab.stop()
-        browser.close_tab(tab)
-    tab = get_new_tab(browser)
-    # add datadome={cid} as cookie to browser
-    tab.call_method("Network.setCookie", name='datadome', value=cid, domain=url_obj.hostname.replace('www.', ''), path='/', secure=True)
-    tab.call_method("Page.navigate", url=url, _timeout=15)
-    # set localStorage.setItem('hash', 'cid')
-    tab.call_method("Runtime.evaluate", expression=f"localStorage.setItem('hash', '{cid}')")
-    tab.wait(5)  # Wait for 5 seconds for the page to load
-    return tab, browser
-
-def get_installed_extensions(user_data_dir):
-    for prefix in ['', 'Secure ']:
-        preferences_path = os.path.join(user_data_dir, 'Default', f'{prefix}Preferences')
-        print(preferences_path)
-        # Wait until the Preferences file is created
-        max_wait_time = 20  # seconds
-        start_time = time.time()
-        while not os.path.exists(preferences_path):
-            if time.time() - start_time > max_wait_time:
-                raise FileNotFoundError(f"Preferences file not found in {max_wait_time} seconds.")
-            time.sleep(1)
-
-        with open(preferences_path, 'r') as file:
-            preferences = json.load(file)
-
-        extensions = preferences.get('extensions', {}).get('settings', {})
-        if extensions:
-            break
-    assert extensions, "No extensions found in Preferences file"
-    installed_extensions = []
-
-    for ext_id, ext_info in extensions.items():
-        if ext_info.get('state') == 1:  # Check if the extension is enabled
-            extension_name = ext_info.get('manifest', {}).get('name')
-            # check if path has previous_dir in it
-            if previous_dir in ext_info.get('path', ''):
-                installed_extensions.append({
-                    'id': ext_id,
-                    'name': extension_name
-                })
-
-    return installed_extensions
-
-def handle_captcha(url, cid, port, extensions, task):
-    try:
-        tab, browser = create_browser_tab(url, cid, port, extensions)
-        for _ in range(30):
-            if task['status'] == 'ready':
-                break
-            tab.wait(1)
-        if task['status'] != 'ready':
-            task['status'] = 'error'
-            task['value'] = 'timeout'
-        tab.stop()
-        browser.close_tab(tab)
-    except Exception as e:
-        print(e)
-        task['status'] = 'error'
-        task['value'] = str(e)
-        raise e
-
-def process_url(task_id, cid, proxy):
-    tmpdirname = tempfile.mkdtemp()
-    # find open port
-    port = 9223
-    while True:
-        try:
-            subprocess.check_output(f'lsof -i:{port}', shell=True)
-            port += 1
-        except:
-            break
-        if port > 9322:
-            raise Exception('No open ports found')
-    print("Using port", port)
-
-    task = tasks[task_id]
-    url = task['url']
-    proxy_command = [
-        'proxy',
-        '--proxy-pool', proxy,
-        '--port', str(port-1000),
-        '--plugins', 'restrict_by_host_upstream.RestrictHostUpstream,proxy.plugin.ProxyPoolPlugin',
-        '--restrict-by-host-upstream', '.*('+"|".join(allowed_hosts)+').*',
-    ]
-    process = subprocess.Popen(proxy_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    try:
-        commands = [
-            CHROME_PATH,
-            f'--remote-debugging-port={port}',
-            f'--load-extension={previous_dir}/extensionv2',
-            f'--user-data-dir={tmpdirname}',
-            f'--proxy-server=http://127.0.0.1:{port-1000}',
-            '--no-first-run',
-            '--no-default-browser-check',
-            '--disable-default-apps',
-        ]
-        p = subprocess.Popen(commands, start_new_session=True)
-        try:
-            extensions = get_installed_extensions(tmpdirname)
-            handle_captcha(url, cid, port, extensions, task)
-        except Exception as e:
-            print(e)
-            task['status'] = 'error'
-        finally:
-            print('killing process')
-            p.kill()
-        if process.poll() is None:
-            os.kill(process.pid, signal.SIGINT)
-            process.communicate()
-    finally:
-        print('terminating process')
-        process.terminate()
-        process.wait()
-    os.system(f'rm -rf {tmpdirname}')
-
-# hash=value&hash=value
 @app.get('/render')
 def render(request: Request):
     data = request.query_params
-    # html that sends the payload to the extension using chrome api
-    extension_id = data['extension_id']
     hash_ = data['hash']
     html = f"""
     <html>
-    <head>
     <script>
-    function sendPayload() {{
-        chrome.runtime.sendMessage('{extension_id}', {{message: 'store', 'hash': "{hash_}"}});
+    window.addEventListener("message", (event) => {{
+        if (event.origin !== window.location.origin) return;
+        if (event.data.type !== "FROM_EXTENSION") return;
+        chrome.runtime.sendMessage(event.data.extensionId, {{message: 'store', 'hash': "{hash_}", 'apiPort': {API_PORT}}});
         console.log('sent payload');
-    }}
-    setTimeout(sendPayload, 1000);
+    }});
     </script>
-    </head>
-    <body onload="sendPayload()">
-    </body>
     </html>
     """
     return Response(content=html, media_type="text/html")
 
-# verify by url
 @app.post("/verify-browser")
 async def verify_browser(request: Request):
     data = await request.json()
@@ -227,15 +54,13 @@ async def verify_browser(request: Request):
     args = (task_id, cid, proxy)
     if 'captcha-delivery' in url:
         func = handle_captcha
-        args = (url, cid, CHROME_PORT, [], tasks[task_id])
-    # open a new thread to process the payload
+        args = (url, cid, CHROME_PORT, tasks[task_id])
     t = threading.Thread(target=func, args=args)
     t.start()
     tasks[task_id]['status'] = 'processing'
     return {
         'task_id': task_id,
     }
-
 
 @app.post("/get-payload")
 async def get_datadome(request: Request):
@@ -253,21 +78,130 @@ async def get_datadome(request: Request):
         'task_id': task_id,
     }
 
-# listen for any incoming requests starting with /task-<task_id>
-@app.get("/task-{task_id}")
-def get_task(task_id: str):
+@app.post("/createTask")
+async def create_task(request: Request):
+    data = await request.json()
+    
+    # Extract data from new format
+    task_data = data.get('task', {})
+    if not task_data or 'websiteURL' not in task_data or 'captchaUrl' not in task_data:
+        return {
+            "errorId": 1,
+            "errorCode": "ERROR_PARAMETER_MISSING",
+            "errorDescription": "Missing required task parameters: websiteURL, captchaUrl"
+        }
+
+    # Map new format to existing format
+    url = task_data['captchaUrl']
+    cid = task_data['oldCookie']
+
+    # Extract proxy details
+    if 'proxyAddress' in task_data:
+        # Extract proxy details
+        proxy = {
+            'host': task_data.get('proxyAddress'),
+            'port': task_data.get('proxyPort'),
+            'user': task_data.get('proxyLogin'),
+            'password': task_data.get('proxyPassword')
+        }
+        if not all([proxy['host'], proxy['port']]):
+            return {
+                "errorId": 1,
+                "errorCode": "ERROR_PROXY_CONFIGURATION",
+                "errorDescription": "Invalid proxy configuration. All proxy fields are required."
+            }
+    elif 'proxy' in task_data:
+        proxy = task_data['proxy']
+    else:
+        return {
+            "errorId": 1,
+            "errorCode": "ERROR_PROXY_MISSING",
+            "errorDescription": "Proxy configuration is required"
+        }
+    proxy = fix_proxy(proxy)
+    # Create task
+    task_id = str(uuid4())
+    tasks[task_id] = {
+        'status': 'processing',
+        'value': None,
+        'cid': cid,
+        'url': url,
+    }
+
+    # Handle task processing
+    func = process_url
+    args = (task_id, cid, proxy)
+    if 'captcha-delivery' in url:
+        func = handle_captcha
+        args = (url, cid, CHROME_PORT, tasks[task_id])
+
+    t = threading.Thread(target=func, args=args)
+    t.start()
+    tasks[task_id]['status'] = 'processing'
+
+    return {
+        'errorId': 0,
+        'status': 'processing',
+        'taskId': task_id
+    }
+
+@app.post("/getTaskResult")
+async def get_task_result(request: Request):
+    data = await request.json()
+    
+    # Validate input
+    if 'taskId' not in data:
+        return {
+            "errorId": 1,
+            "errorCode": "ERROR_PARAMETER_MISSING",
+            "errorDescription": "Missing required parameter: taskId"
+        }
+    
+    task_id = data['taskId']
     if task_id not in tasks:
         return {
-            'status': 'error',
-            'value': 'task_id not found',
-            'task_id': task_id,
+            "errorId": 1,
+            "errorCode": "ERROR_TASK_NOT_FOUND",
+            "errorDescription": "Task not found"
         }
+    
     task = tasks[task_id]
-    cid = task['cid']
-    with open(f'{current_dir}/files/{cid}.html', 'r') as f:
-        script = f.read()
-    # render the html
-    return Response(content=script, media_type="text/html")
+    
+    # If task is still processing
+    if task['status'] == 'processing':
+        return {
+            "errorId": 0,
+            "status": "processing"
+        }
+
+    # If task is ready
+    if task['status'] == 'ready':
+        value = task['value']
+        if isinstance(value, str) and value.startswith('http'):
+            solution = {'url': value}
+        elif value.get('payload'):
+            solution = {'interstitial': value}
+        else:
+            solution = {'cookie': task['payload']}
+        return {
+            "errorId": 0,
+            "status": "ready",
+            "solution": solution
+        }
+
+    if task['status'] == 'blocked':
+        return {
+            "errorId": 1,
+            "errorCode": "ERROR_PROXY_BANNED",
+            "errorDescription": "Proxy is banned, please change your proxy"
+        }
+
+    # If task failed
+    return {
+        "errorId": 1,
+        "errorCode": "ERROR_TASK_FAILED",
+        "errorDescription": "Task processing failed"
+    }
 
 @app.post("/v1/response")
 async def response(request: Request):
@@ -275,7 +209,6 @@ async def response(request: Request):
     print(data)
     body = data['body']
     payload = body['payload']
-    # turn 'k=v&k=v' into {'k': 'v', 'k': 'v'}
     json_data = payload
     if not payload.startswith('http'):
         json_data = {}
@@ -285,21 +218,22 @@ async def response(request: Request):
                 key, value = param.split('=', 1)
             except:
                 key, value = param, ''
-            # urldecode
             if not key.strip():
                 continue
             json_data[key.strip()] = unquote(value.strip())
     cid = data['hashedUrl'] or ''
-    # modify all tasks with the same cid
     for _, task in tasks.items():
         if task['cid'] == cid:
-            # if task is /captcha then do not accept payload
             if 'captcha-delivery' not in task['url'] and isinstance(json_data, dict) and json_data.get('payload'):
                 continue
             if isinstance(json_data, dict) and cid in json_data.get('datadome', ''):
                 continue
             task['value'] = json_data
-            task['status'] = 'ready'
+            task['payload'] = payload
+            if json_data == 'blocked':
+                task['status'] = 'blocked'
+            else:
+                task['status'] = 'ready'
 
 if __name__ == "__main__":
     import uvicorn
