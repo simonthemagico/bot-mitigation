@@ -31,8 +31,23 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             let pieceImageUrl = imageUrls.find(url => url.includes('.frag.'));
             solvePuzzle(bgImageUrl, pieceImageUrl);
         }
-        else if(!tab.url.includes('localhost')){
-            sendCookies(tab.url, tabId);
+        else if(!tab.url.includes('localhost') && !tab.url.includes('captcha-delivery.com')){
+            // Check dd.t value before sending cookies
+            chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                func: () => window.dd
+            }, (result) => {
+                console.log('dd value: ', result?.[0]?.result);
+                if(result?.[0]?.result?.t === 'bv'){
+                    sendToApi('blocked');
+                }
+                else if (result?.[0]?.result) {
+                    return;
+                }
+                else {
+                    sendCookies(tab.url, tabId);
+                }
+            });
         }
     }
 });

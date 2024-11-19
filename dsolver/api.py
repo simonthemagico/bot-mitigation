@@ -84,6 +84,7 @@ async def create_task(request: Request):
     
     # Extract data from new format
     task_data = data.get('task', {})
+    print(task_data)
     if not task_data or 'websiteURL' not in task_data or 'captchaUrl' not in task_data:
         return {
             "errorId": 1,
@@ -223,6 +224,8 @@ async def response(request: Request):
             json_data[key.strip()] = unquote(value.strip())
     cid = data['hashedUrl'] or ''
     for _, task in tasks.items():
+        if task['status'] in ['ready', 'blocked']:
+            continue
         if task['cid'] == cid:
             if 'captcha-delivery' not in task['url'] and isinstance(json_data, dict) and json_data.get('payload'):
                 continue
@@ -230,7 +233,7 @@ async def response(request: Request):
                 continue
             task['value'] = json_data
             task['payload'] = payload
-            if json_data == 'blocked':
+            if payload == 'blocked':
                 task['status'] = 'blocked'
             else:
                 task['status'] = 'ready'

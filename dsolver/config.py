@@ -18,7 +18,10 @@ ALLOWED_HOSTS = [
     'captcha-delivery',
     'yelp',
     'idealista',
-    'leclerc'
+    'leclerc',
+    'intermarche',
+    'cedeo',
+    'tripadvisor'
 ]
 
 # Create files/ directory if it doesn't exist
