@@ -1,0 +1,16 @@
+2025-01-30 17:55:10,001 - api.main - INFO - New task b525de61-e521-44cb-8a10-80bec3becae7 for URL: https://www.google.com/search?q=test
+2025-01-30 17:55:10,001 - api.main - ERROR - Task b525de61-e521-44cb-8a10-80bec3becae7 failed: name 'BypassHandler' is not defined
+2025-01-30 17:58:30,470 - api.main - INFO - New task tk_117200f466e39845e6167f00 for URL: https://www.google.com/search?q=test
+2025-01-30 17:58:30,471 - api.main - ERROR - Task tk_117200f466e39845e6167f00 failed: name 'BypassHandler' is not defined
+2025-01-30 18:02:12,072 - api.main - INFO - New task tk_30e925a596c1069dc5c82ab7 for URL: https://www.google.com/search?q=test
+2025-01-30 18:02:12,072 - api.main - ERROR - Task tk_30e925a596c1069dc5c82ab7 failed: name 'BypassHandler' is not defined
+2025-01-30 18:02:12,076 - api.main - INFO - New task tk_491d6ac9e36e740d60e97577 for URL: https://www.google.com/search?q=test
+2025-01-30 18:02:12,076 - api.main - ERROR - Task tk_491d6ac9e36e740d60e97577 failed: name 'BypassHandler' is not defined
+2025-01-30 18:10:52,264 - api.main - INFO - New task tk_1b015e5e2069949c0019b6d1 for URL: https://www.google.com/search?q=test query
+2025-01-30 18:10:52,265 - api.main - ERROR - Task tk_1b015e5e2069949c0019b6d1 failed: name 'BypassHandler' is not defined
+2025-01-30 18:18:28,394 - api.main - INFO - New task tk_a92dc85f958c718865ef412b for URL: https://www.google.com/search?q=test query
+2025-01-30 18:18:28,394 - api.main - ERROR - Task tk_a92dc85f958c718865ef412b failed: ChromeManager.__init__() missing 2 required positional arguments: 'extension_path' and 'user_data_dir'
+2025-01-30 18:19:05,726 - api.main - INFO - New task tk_47ae09f9d197c00cf227e21e for URL: https://www.google.com/search?q=test query
+2025-01-30 18:19:05,726 - api.main - ERROR - Task tk_47ae09f9d197c00cf227e21e failed: ChromeManager.__init__() missing 2 required positional arguments: 'extension_path' and 'user_data_dir'
+2025-01-30 18:20:22,756 - api.main - INFO - New task tk_044230798472a66b4f8e7ecd for URL: https://www.google.com/search?q=test query
+2025-01-30 18:21:34,073 - api.main - ERROR - Task tk_044230798472a66b4f8e7ecd failed: HTTPConnectionPool(host='localhost', port=55401): Max retries exceeded with url: /json/version (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x102eb1810>: Failed to establish a new connection: [Errno 61] Connection refused'))
