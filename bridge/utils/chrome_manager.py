@@ -2,135 +2,200 @@ import subprocess
 import os
 import shutil
 import tempfile
+import platform
 
+def get_chrome_path():
+    """Get the Chrome executable path based on OS"""
+    system = platform.system()
+    
+    if system == "Darwin":  # macOS
+        paths = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        ]
+    elif system == "Linux":
+        paths = [
+            "google-chrome",
+            "google-chrome-stable",
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable"
+        ]
+    else:
+        raise OSError(f"Unsupported operating system: {system}")
+
+    # Try each path
+    for path in paths:
+        expanded_path = os.path.expanduser(path)
+        if os.path.exists(expanded_path):
+            return expanded_path
+        if system == "Linux" and shutil.which(path):
+            return path
+            
+    raise FileNotFoundError(f"Chrome not found in standard locations for {system}")
+
+def get_default_paths():
+    """Get default paths for macOS Chrome profiles and extensions"""
+    home = os.path.expanduser("~")
+    return {
+        'profiles': os.path.join(home, 'Library/Application Support/Google/Chrome'),
+        'extensions': os.path.join(home, 'Library/Application Support/Google/Chrome/Extensions')
+    }
 
 class ChromeManager:
     def __init__(
             self, 
             proxy_port, 
             chrome_port, 
-            # extension_path="/home/sasha/extensions/capsolver",
             extension_path=None,
-            # user_data_dir="/home/sasha/chrome_profiles/mac_profile",
             user_data_dir=None,
             headless=True, 
             command=None
         ):
-
-        self.screen_name = f"chrome_browser_{chrome_port}"
+        """Initialize Chrome manager
+        
+        Args:
+            proxy_port: Port number for proxy
+            chrome_port: Port for Chrome debugging
+            extension_path: Path to Chrome extension
+            user_data_dir: Chrome profile directory
+            headless: Run in headless mode
+            command: Custom Chrome command
+        """
         self.temp_dir_prefix = ".com.google.Chrome."
         self.temp_dir_path = tempfile.gettempdir()
-        self.extension_path = extension_path
         self.headless = headless
-        
-        if command is None: 
-            self.command = [
-                "google-chrome",
-                f"--remote-debugging-port={chrome_port}",
-                f"--proxy-server=127.0.0.1:{proxy_port}",
-                "--no-first-run",
-                "--no-default-browser-check", 
-                "--disable-gpu", 
-                "--password-store=basic"
-            ]
+        self.chrome_process = None
 
-            if self.extension_path: 
-                self.command.append(f"--disable-extensions-except={self.extension_path}")
-                self.command.append(f"--load-extension={self.extension_path}")
-
-            if user_data_dir: 
-                self.command.append(f"--user-data-dir={user_data_dir}")
-            else: 
-                self.command.append("--incognito")
-
-            if headless: 
-                self.command.append("--headless")
-        
-        else: 
+        if command is None:
+            self._setup_chrome_command(proxy_port, chrome_port, extension_path, user_data_dir)
+        else:
             self.command = command
 
+    def _setup_chrome_command(self, proxy_port, chrome_port, extension_path, user_data_dir):
+        """Set up Chrome command with all necessary arguments"""
+        chrome_path = get_chrome_path()
+        self.command = [
+            chrome_path,
+            f"--remote-debugging-port={chrome_port}",
+            f"--proxy-server=127.0.0.1:{proxy_port}",
+            "--no-first-run",
+            "--no-default-browser-check", 
+            "--disable-gpu", 
+            "--password-store=basic"
+        ]
+
+        # Handle profile directory
+        if user_data_dir:
+            paths = get_default_paths()
+            if not os.path.isabs(user_data_dir):
+                user_data_dir = os.path.join(paths['profiles'], user_data_dir)
+                os.makedirs(user_data_dir, exist_ok=True)
+            self.command.append(f"--user-data-dir={user_data_dir}")
+        else:
+            self.command.append("--incognito")
+
+        # Handle extension
+        if extension_path:
+            if not os.path.isabs(extension_path):
+                extension_path = os.path.abspath(extension_path)
+            if os.path.exists(extension_path):
+                self.command.extend([
+                    f"--load-extension={extension_path}",
+                    f"--disable-extensions-except={extension_path}"
+                ])
+            else:
+                raise FileNotFoundError(f"Extension not found: {extension_path}")
+
+        if self.headless:
+            self.command.append("--headless")
+
+    def create_chrome(self):
+        """Start Chrome process"""
+        try:
+            env = os.environ.copy()
+            if not self.headless:
+                env["DISPLAY"] = ":1"
+            
+            self.chrome_process = subprocess.Popen(
+                self.command,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            print("Chrome started successfully!")
+
+        except Exception as e:
+            print(f"Error during Chrome setup: {e}")
+            raise
+
+    def close_chrome(self):
+        """Clean up Chrome process and temporary files"""
+        try:
+            if self.chrome_process:
+                self.chrome_process.terminate()
+                self.chrome_process.wait(timeout=5)
+
+            if "--incognito" in self.command:
+                for user_dir in self._get_chrome_user_dirs():
+                    shutil.rmtree(user_dir, ignore_errors=True)
+            
+            subprocess.run(["pkill", "-f", "google-chrome"], check=False)
+
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+            raise
+
     def _get_chrome_user_dirs(self):
-        """Get the list of Chrome user data directories in the temp directory."""
+        """Get Chrome temporary user directories"""
         return [
             os.path.join(self.temp_dir_path, d)
             for d in os.listdir(self.temp_dir_path)
             if d.startswith(self.temp_dir_prefix)
         ]
 
-    def create_chrome(self):
-        try:
+def test_chrome():
+    """Test Chrome manager with proxy"""
+    chrome_manager = ChromeManager(
+        proxy_port=8899,
+        chrome_port=7778,
+        headless=False,
+        user_data_dir="test_profile"
+    )
 
-            result = subprocess.run(['screen', '-list'], capture_output=True, text=True)
-            if self.screen_name in result.stdout:
-                print(f"Screen session '{self.screen_name}' already exists.")
-                subprocess.run(['screen', '-S', self.screen_name, '-X', 'quit'], check=True)
-                print(f"Terminated existing screen session '{self.screen_name}'")
-
-            print(f"Creating new screen session: {self.screen_name}")
-            subprocess.run(['screen', '-S', self.screen_name, '-dm', 'bash', '-c', 'cd ~ && exec bash'])
-            print(f"Created new screen session: {self.screen_name}")
-
-            env = os.environ.copy()
-
-            # 1. Set DISPLAY if headless is False
-            if not self.headless:
-                subprocess.run(
-                    ["screen", "-S", self.screen_name, "-X", "stuff", "export DISPLAY=:1\n"],
-                    env=env,
-                    check=True
-                )
-                print("Set DISPLAY=:1 for non-headless mode.")
-            
-            # 2. Run Chrome in the screen session
-            subprocess.run(
-                [
-                    "screen", 
-                    "-S", 
-                    self.screen_name, 
-                    "-X", 
-                    "stuff", 
-                    f"{' '.join(self.command)}\n"
-                ],
-                check=True, 
-                env=env
-            )
-            print(f"Chrome started successfully in screen session '{self.screen_name}'!")
-
-        except subprocess.CalledProcessError as e:
-            print(f"Error during Chrome setup: {e}")
-
-    def close_chrome(self):
-        try:
-
-            result = subprocess.run(['screen', '-list'], capture_output=True, text=True)
-
-            # Kill from screen
-            if self.screen_name in result.stdout:
-                print(f"Terminating screen session '{self.screen_name}'...")
-                subprocess.run(['screen', '-S', self.screen_name, '-X', 'quit'], check=True)
-                print(f"Screen session '{self.screen_name}' terminated.")
-            
-            if "--incognito" in self.command:
-                user_dirs = self._get_chrome_user_dirs()
-                for user_dir in user_dirs:
-                    shutil.rmtree(user_dir, ignore_errors=False)
-                    print(f"Removing Chrome user data directory: {user_dir}")
-            
-            # Kill from process
-            subprocess.run(["pkill", "-f", "google-chrome"], check=False)
-
-        except Exception as e:
-            print(f"Error during cleanup: {e}")
-
+    browser = None
+    tab = None
+    
+    try:
+        # Start Chrome
+        chrome_manager.create_chrome()
+        time.sleep(2)
+        
+        # Connect DevTools
+        browser = pychrome.Browser(url="http://localhost:7778")
+        tab = browser.list_tab()[0] if browser.list_tab() else browser.new_tab()
+        tab.start()
+        
+        # Enable domains
+        tab.Network.enable()
+        tab.Page.enable()
+        
+        # Test proxy
+        tab.Page.navigate(url="https://api.ipify.org")
+        time.sleep(5)
+        
+        # Get IP
+        result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
+        print(f"Proxy IP: {result['result']['value'].strip()}")
+        
+        input("Press Enter to quit...")
+        
+    finally:
+        # Cleanup
+        if tab:
+            tab.stop()
+        if browser and tab:
+            browser.close_tab(tab)
+        chrome_manager.close_chrome()
 
 if __name__ == "__main__":
-    manager = ChromeManager(
-        proxy_port=8899, 
-        chrome_port=7778, 
-        # user_data_dir="/home/sasha/chrome_profiles/mac_profile", 
-        headless=False, 
-        command=None
-    )
-    manager.create_chrome()
-    input("Press Enter to close Chrome...")
-    manager.close_chrome()
+    test_chrome()

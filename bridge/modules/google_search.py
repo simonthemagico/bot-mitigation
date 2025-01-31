@@ -1,26 +1,14 @@
 from .base import BaseBypass
-from utils.chrome_manager import ChromeManager
-from utils.proxy_manager import ProxyManager
 
 import time
 import pychrome
 import json
+import os
 
 class GoogleSearchBypass(BaseBypass):
-    def __init__(self, proxy_pool: str, url: str, headless: bool = True):
-        super().__init__(proxy_pool, url, headless)
-        self.proxy_port, self.chrome_port = self.generate_unique_ports()
-        
-        self.proxy_server = ProxyManager(
-            proxy_pool=proxy_pool, 
-            proxy_port=self.proxy_port
-        )
-        
-        self.chrome = ChromeManager(
-            proxy_port=self.proxy_port,
-            chrome_port=self.chrome_port,
-            headless=headless
-        )
+    def __init__(self, proxy_pool: str, url: str, task_id: str, headless: bool = True):
+        super().__init__(proxy_pool, url, task_id, headless)
+        self.initialize()
 
     def bypass(self):
         try:
@@ -38,30 +26,24 @@ class GoogleSearchBypass(BaseBypass):
             version_info = browser.version()
             print("Browser Version:", version_info['Browser'])
 
-            tab_lists = browser.list_tab()
-            if len(tab_lists)>0:
-                tab = tab_lists[0]
-            else:
-                tab = browser.new_tab()
-
+            # Tab management
+            tab = browser.list_tab()[0] if browser.list_tab() else browser.new_tab()
             tab.start()
+
             tab.Network.enable()
             tab.Page.enable()
 
-            global captured_headers
             captured_headers = {}
-
             def request_intercept(request, **kwargs):
                 """Callback function to capture headers safely."""
                 headers = request.get("headers", {})
                 captured_headers.update(headers)
-                # print(f"Captured Headers: {captured_headers}")
 
             tab.Network.requestWillBeSent = request_intercept
 
-            # print(f"Navigating to URL: https://api.ipify.org")
-            # tab.Page.navigate(url="https://api.ipify.org")
-            # time.sleep(5)
+            print(f"Navigating to URL: https://api.ipify.org")
+            tab.Page.navigate(url="https://api.ipify.org")
+            time.sleep(5)
 
             print(f"Navigating to URL: {self.url}")
             tab.Page.navigate(url=self.url)
@@ -75,26 +57,22 @@ class GoogleSearchBypass(BaseBypass):
             cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies_list}
             print("Cookies Retrieved:", cookie_dict)
 
-            input('??')
-
             # Get the page content
             result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
             page_content = result.get("result", {}).get("value", "")
-            print("Page Content Retrieved.")
+            print("Page Content retrieved.")
 
-            # Save page content to a file
-            with open("test.html", "w", encoding="utf-8") as f:
-                f.write(page_content)
-            print("Page content saved to 'test.html'.")
+            # Use base class method to save content
+            filepath = self.save_page_content(
+                content=page_content,
+                prefix="bypass"
+            )
 
             # Format cookies for curl
             cookies_curl = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
-
-            # Format headers for curl
             headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in captured_headers.items() if k.lower() not in ['cookie']])
-
-            # Generate curl command
             curl_command = f"curl -x {self.proxy_pool} '{self.url}' --cookie '{cookies_curl}' {headers_curl} -o ~/test.html"
+
             print("\nGenerated cURL Command:")
             print(curl_command)
 
@@ -107,7 +85,5 @@ class GoogleSearchBypass(BaseBypass):
             raise e
 
         finally:
-            print("Stopping Chrome Browser...")
-            self.chrome.close_chrome()
-            print("Stopping Proxy Server...")
-            self.proxy_server.stop_proxy_server()
+            print("Cleaning up...")
+            self.cleanup()

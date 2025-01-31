@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+pychrome
+python-multipart
+requests
+proxy.py
+proxy
+python-dotenv    

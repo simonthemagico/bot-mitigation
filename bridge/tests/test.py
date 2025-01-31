@@ -28,7 +28,7 @@ def test_create_task(api_key):
     }
     
     data = {
-        "url": "https://www.google.com/search?q=test",
+        "url": "https://www.google.com/search?q=pizza",
         "proxy_pool": "http://user-sp0e9f6467:08yf0pO2avT_mbiJNp@dc.smartproxy.com:20004",
         "bypass_method": "google-search",
         "headless": False
@@ -197,7 +197,7 @@ def main():
         print("Health check failed! Stopping test.")
         return
         
-    result = test_google_bypass(query="test query")
+    result = test_google_bypass(query="pizza")
 
     if result:
         print("\n=== Test Completed Successfully! ===")

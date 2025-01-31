@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, Security, Depends
-from fastapi.security.api_key import APIKeyHeader
+from fastapi import FastAPI, HTTPException, Security, Depends, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
 from pydantic import BaseModel
 from typing import Optional, Dict
 from enum import Enum
@@ -8,25 +9,26 @@ import time
 from asyncio import create_task as create_async_task, TimeoutError
 import asyncio
 import secrets
+import re
 
-# Import your existing bypass handler
 from modules.google_search import GoogleSearchBypass
 
-# API Key header definition
-API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=True)
-
-# API keys
-API_KEYS = {
-    "bri_live_51IkEHVAFM6jPN0afKwmUtcW1EkQyHGYmLM9QNDtBAWsx0huWaHyFfEDSlFcnzjM1fojdcJrkNeSPneJ3VC1ZvkOP00O8fbReYR"
+VALID_TOKENS = {
+    "77f6bc041b99accf93093ebdc67a45ef472a4496"
 }
 
-async def get_api_key(api_key_header: str = Security(API_KEY_HEADER)):
-    if api_key_header in API_KEYS:
-        return api_key_header
-    raise HTTPException(
-        status_code=403,
-        detail="Invalid API Key"
-    )
+async def verify_token(authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="No authorization header")
+    
+    if not authorization.startswith("Token "):
+        raise HTTPException(status_code=401, detail="Invalid token format. Use 'Token {token}'")
+    
+    token = authorization.replace("Token ", "")
+    if token not in VALID_TOKENS:
+        raise HTTPException(status_code=403, detail="Invalid token")
+        
+    return token
 
 # Constant for timeout
 TIMEOUT = 30  # seconds
@@ -41,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 # Enums for task types and statuses
 class BypassMethod(str, Enum):
-    GOOGLE_SEARCH = "google-search"  # Your current method
+    GOOGLE_SEARCH = "google_search"  # Your current method
     # Future methods:
     # LINKEDIN = "linkedin"
     # FACEBOOK = "facebook"
@@ -62,7 +64,7 @@ class TaskRequest(BaseModel):
     headless: Optional[bool] = True
 
 class TaskResponse(BaseModel):
-    task_id: str
+    id: str
     status: TaskStatus
     bypass_method: BypassMethod
     cookies: Optional[Dict[str, str]] = None
@@ -87,24 +89,22 @@ app = FastAPI(
 # Simple in-memory store
 task_store = {}
 
-# Generate stripe-like task ID
-def generate_task_id(prefix="tk_") -> str:
-    """Generate a Stripe-like task ID"""
-    # Generate 24 chars of random string (like Stripe)
-    random_part = secrets.token_hex(12)  # 24 chars in hex
-    return f"{prefix}{random_part}"
+# Generate task ID
+def generate_task_id():
+    """Generate a simple 40-character hex task ID"""
+    return secrets.token_hex(20)
 
 @app.post("/task", response_model=TaskResponse)
 async def create_task(
         task: TaskRequest, 
-        api_key: str = Depends(get_api_key)
+        token: str = Depends(verify_token)
     ):
     task_id = generate_task_id()
     logger.info(f"New task {task_id} for URL: {task.url}")
 
     # Initialize task in store immediately
     initial_response = TaskResponse(
-        task_id=task_id,
+        id=task_id,
         status=TaskStatus.PENDING,
         bypass_method=task.bypass_method
     )
@@ -123,6 +123,7 @@ async def create_task(
             handler = handler_class(
                 proxy_pool=task.proxy_pool,
                 url=task.url,
+                task_id=task_id,
                 headless=task.headless
             )
             
@@ -165,11 +166,10 @@ async def create_task(
     # Return initial response with task_id
     return initial_response
 
-
 @app.get("/task/{task_id}", response_model=TaskResponse)
 async def get_task(
         task_id: str, 
-        api_key: str = Depends(get_api_key)
+        token: str = Depends(verify_token)
     ):
     if task_id not in task_store:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -177,7 +177,7 @@ async def get_task(
 
 @app.get("/health")
 async def health_check(
-    api_key: str = Depends(get_api_key)
+    token: str = Depends(verify_token)
 ):
     return {
         "status": "healthy",

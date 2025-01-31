@@ -5,8 +5,8 @@ import time
 class ProxyManager:
     def __init__(self, proxy_pool, proxy_port):
         self.proxy_pool = proxy_pool
-        self.screen_name = f"proxy_server_{proxy_port}"
         self.port = str(proxy_port)
+        self.proxy_process = None
         self.command = [
             "python3", "-m", "proxy",
             "--proxy-pool", self.proxy_pool,
@@ -16,45 +16,90 @@ class ProxyManager:
 
     def start_proxy_server(self):
         try:
-            result = subprocess.run(['screen', '-list'], capture_output=True, text=True)
-            if self.screen_name in result.stdout:
-                print(f"Screen session '{self.screen_name}' already exists.")
-                subprocess.run(['screen', '-S', self.screen_name, '-X', 'quit'], check=True)
-                print(f"Terminated existing screen session '{self.screen_name}'")
+            # Kill any existing proxy on this port
+            self.stop_proxy_server()
 
-            time.sleep(2)
-
-            print(f"Creating new screen session: {self.screen_name}")
-            subprocess.run(['screen', '-S', self.screen_name, '-dm', 'bash', '-c', 'cd ~ && exec bash'])
-            print(f"Created new screen session: {self.screen_name}")
-
-            time.sleep(2)
-            print("Waiting for screen session to start...")
-
-            subprocess.run(
-                ["screen", "-S", self.screen_name, "-X", "stuff", f"{' '.join(self.command)}\n"],
-                check=True
+            print(f"Starting proxy server on port {self.port}...")
+            self.proxy_process = subprocess.Popen(
+                self.command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
             )
-            print(f"Command sent to screen session '{self.screen_name}'")
+            
+            # Wait a bit for proxy to start
+            time.sleep(2)
 
-        except subprocess.CalledProcessError as e:
+            # Check if process is still running
+            if self.proxy_process.poll() is None:
+                print(f"Proxy server started successfully on port {self.port}")
+            else:
+                stdout, stderr = self.proxy_process.communicate()
+                raise Exception(f"Proxy failed to start: {stderr.decode()}")
+
+        except Exception as e:
             print(f"Error during proxy server setup: {e}")
+            raise
 
     def stop_proxy_server(self):
         try:
-            result = subprocess.run(['screen', '-list'], capture_output=True, text=True)
-            if self.screen_name in result.stdout:
-                print(f"Terminating screen session '{self.screen_name}'...")
-                subprocess.run(['screen', '-S', self.screen_name, '-X', 'quit'], check=True)
-                print(f"Screen session '{self.screen_name}' terminated.")
-            else:
-                print(f"Screen session '{self.screen_name}' does not exist.")
+            if self.proxy_process:
+                print("Stopping proxy server...")
+                # Try graceful shutdown first
+                self.proxy_process.terminate()
+                try:
+                    self.proxy_process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    # Force kill if it doesn't stop
+                    self.proxy_process.kill()
+                    self.proxy_process.wait()
+                print("Proxy server stopped")
+            
+            # Clean up any remaining processes on this port
+            try:
+                subprocess.run(
+                    ["lsof", "-ti", f":{self.port}"], 
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE
+                )
+                subprocess.run(
+                    f"kill -9 $(lsof -ti:{self.port})", 
+                    shell=True, 
+                    check=False
+                )
+            except:
+                pass
 
-        except subprocess.CalledProcessError as e:
-            print(f"Error during proxy server closure: {e}")
+        except Exception as e:
+            print(f"Error during proxy server cleanup: {e}")
+            raise
+
+def test(): 
+    print("=== Testing Proxy Manager ===")
+    
+    proxy_manager = ProxyManager(
+        proxy_pool='http://user-sp0e9f6467:08yf0pO2avT_mbiJNp@dc.smartproxy.com:20004',
+        proxy_port=8899
+    )
+    
+    try:
+        print("\n1. Starting proxy server...")
+        proxy_manager.start_proxy_server()
+        
+        print("\n2. Proxy running. Testing for 10 seconds...")
+        time.sleep(10)
+
+        input('Wanna stop proxy?')
+        
+        print("\n3. Stopping proxy server...")
+        proxy_manager.stop_proxy_server()
+        
+        print("\n=== Proxy Test Complete ===")
+        
+    except Exception as e:
+        print(f"\nError during test: {e}")
+    finally:
+        proxy_manager.stop_proxy_server()
+
 
 if __name__ == "__main__":
-    manager = ProxyManager(proxy_pool='http://user-sp0e9f6467:08yf0pO2avT_mbiJNp@dc.smartproxy.com:20004', proxy_port=8899)
-    manager.start_proxy_server()
-    input("Press Enter to close Proxy server...")
-    manager.stop_proxy_server()
+    test()
