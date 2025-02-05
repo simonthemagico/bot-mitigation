@@ -7,7 +7,14 @@ import os
 
 class GoogleSearchBypass(BaseBypass):
     def __init__(self, proxy_pool: str, url: str, task_id: str, headless: bool = True):
-        super().__init__(proxy_pool, url, task_id, headless)
+        super().__init__(
+            proxy_pool, 
+            url, 
+            task_id, 
+            headless, 
+            user_data_dir=f"sasha_{task_id}", 
+            extension_path="extensions/capsolver"
+        )
         self.initialize()
 
     def bypass(self):

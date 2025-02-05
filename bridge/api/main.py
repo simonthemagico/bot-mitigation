@@ -110,61 +110,68 @@ async def create_task(
     )
     task_store[task_id] = initial_response.dict()
 
-    # Define the actual task execution
-    async def execute_bypass():
-        try: 
-            # Update status to in progress
-            task_store[task_id].update({"status": TaskStatus.IN_PROGRESS})
-
-            handler_class = BYPASS_HANDLERS.get(task.bypass_method)
-            if not handler_class:
-                raise ValueError(f"No handler found for method: {task.bypass_method}")
-
-            handler = handler_class(
-                proxy_pool=task.proxy_pool,
-                url=task.url,
-                task_id=task_id,
-                headless=task.headless
-            )
-            
-            # Execute bypass
-            page_content, cookies, curl_command = handler.bypass()
-            
-            # Update task store with success
+    # Create background task
+    async def timeout_wrapper():
+        try:
+            await asyncio.wait_for(execute_bypass(task_id, task), timeout=TIMEOUT)
+        except TimeoutError:
+            logger.error(f"Task {task_id} timed out after {TIMEOUT} seconds")
             task_store[task_id].update({
-                "status": TaskStatus.DONE,
-                "cookies": cookies,
-                "curl_command": curl_command
+                "status": TaskStatus.TIMEOUT,
+                "error": f"Task timed out after {TIMEOUT} seconds"
             })
-
-            logger.info(f"Task {task_id} completed successfully")
-            
         except Exception as e:
-            logger.error(f"Task {task_id} failed: {str(e)}")
+            logger.error(f"Task {task_id} failed unexpectedly: {str(e)}")
             task_store[task_id].update({
                 "status": TaskStatus.ERROR,
                 "error": str(e)
             })
 
-    # Start task execution with timeout
-    try:
-        # Create and run task with timeout
-        await asyncio.wait_for(execute_bypass(), timeout=TIMEOUT)
-    except TimeoutError:
-        logger.error(f"Task {task_id} timed out after {TIMEOUT} seconds")
+    # Start task in background
+    asyncio.create_task(timeout_wrapper())
+
+    return initial_response
+
+# Separate function for task execution
+async def execute_bypass(task_id: str, task: TaskRequest):
+    try: 
+        # Update status to in progress
+        task_store[task_id].update({"status": TaskStatus.IN_PROGRESS})
+
+        handler_class = BYPASS_HANDLERS.get(task.bypass_method)
+        if not handler_class:
+            raise ValueError(f"No handler found for method: {task.bypass_method}")
+
+        # Run bypass in threadpool since it's blocking
+        loop = asyncio.get_event_loop()
+        handler = handler_class(
+            proxy_pool=task.proxy_pool,
+            url=task.url,
+            task_id=task_id,
+            headless=task.headless
+        )
+        
+        # Execute bypass in thread pool
+        page_content, cookies, curl_command = await loop.run_in_executor(
+            None, handler.bypass
+        )
+        
+        # Update task store with success
         task_store[task_id].update({
-            "status": TaskStatus.TIMEOUT,
-            "error": f"Task timed out after {TIMEOUT} seconds"
+            "status": TaskStatus.DONE,
+            "cookies": cookies,
+            "curl_command": curl_command
         })
+
+        logger.info(f"Task {task_id} completed successfully")
+        
     except Exception as e:
-        logger.error(f"Task {task_id} failed unexpectedly: {str(e)}")
+        logger.error(f"Task {task_id} failed: {str(e)}")
         task_store[task_id].update({
             "status": TaskStatus.ERROR,
             "error": str(e)
         })
 
-    # Return initial response with task_id
-    return initial_response
 
 @app.get("/task/{task_id}", response_model=TaskResponse)
 async def get_task(

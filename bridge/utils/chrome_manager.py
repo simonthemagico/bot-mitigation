@@ -3,6 +3,10 @@ import os
 import shutil
 import tempfile
 import platform
+import time
+import pychrome
+
+from .proxy_manager import ProxyManager
 
 def get_chrome_path():
     """Get the Chrome executable path based on OS"""
@@ -46,7 +50,7 @@ class ChromeManager:
             self, 
             proxy_port, 
             chrome_port, 
-            extension_path=None,
+            extension_path="extensions/capsolver",
             user_data_dir=None,
             headless=True, 
             command=None
@@ -66,6 +70,9 @@ class ChromeManager:
         self.headless = headless
         self.chrome_process = None
 
+        # Get bridge root directory (two levels up from chrome_manager.py)
+        self.bridge_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
         if command is None:
             self._setup_chrome_command(proxy_port, chrome_port, extension_path, user_data_dir)
         else:
@@ -74,6 +81,7 @@ class ChromeManager:
     def _setup_chrome_command(self, proxy_port, chrome_port, extension_path, user_data_dir):
         """Set up Chrome command with all necessary arguments"""
         chrome_path = get_chrome_path()
+
         self.command = [
             chrome_path,
             f"--remote-debugging-port={chrome_port}",
@@ -94,10 +102,10 @@ class ChromeManager:
         else:
             self.command.append("--incognito")
 
-        # Handle extension
+        # Handle extension - always resolve relative to bridge root
         if extension_path:
             if not os.path.isabs(extension_path):
-                extension_path = os.path.abspath(extension_path)
+                extension_path = os.path.join(self.bridge_root, extension_path)
             if os.path.exists(extension_path):
                 self.command.extend([
                     f"--load-extension={extension_path}",
@@ -120,9 +128,23 @@ class ChromeManager:
                 self.command,
                 env=env,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stderr=subprocess.PIPE, 
+                text=True
             )
             print("Chrome started successfully!")
+
+            time.sleep(2)
+
+            # Check if process is still running
+            if self.chrome_process.poll() is not None:
+                stdout, stderr = self.chrome_process.communicate()
+                print("\nChrome failed to start:")
+                print("Exit code:", self.chrome_process.returncode)
+                print("Stdout:", stdout)
+                print("Stderr:", stderr)
+                raise Exception("Chrome failed to start")
+                
+            print("\nChrome process started with PID:", self.chrome_process.pid)
 
         except Exception as e:
             print(f"Error during Chrome setup: {e}")
@@ -139,7 +161,8 @@ class ChromeManager:
                 for user_dir in self._get_chrome_user_dirs():
                     shutil.rmtree(user_dir, ignore_errors=True)
             
-            subprocess.run(["pkill", "-f", "google-chrome"], check=False)
+            # Thread unsafe
+            # subprocess.run(["pkill", "-f", "google-chrome"], check=False)
 
         except Exception as e:
             print(f"Error during cleanup: {e}")
@@ -154,12 +177,19 @@ class ChromeManager:
         ]
 
 def test_chrome():
+    """Run proxy manager"""
+    proxy_server = ProxyManager(
+        proxy_pool='http://user-sp0e9f6467:08yf0pO2avT_mbiJNp@dc.smartproxy.com:20004',
+        proxy_port=8899
+    )
+    proxy_server.start_proxy_server()
+
     """Test Chrome manager with proxy"""
     chrome_manager = ChromeManager(
         proxy_port=8899,
         chrome_port=7778,
         headless=False,
-        user_data_dir="test_profile"
+        user_data_dir="sasha"
     )
 
     browser = None
@@ -196,6 +226,7 @@ def test_chrome():
         if browser and tab:
             browser.close_tab(tab)
         chrome_manager.close_chrome()
+        proxy_server.stop_proxy_server()
 
 if __name__ == "__main__":
     test_chrome()
