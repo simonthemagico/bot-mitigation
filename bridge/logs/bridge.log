@@ -312,3 +312,453 @@ Traceback (most recent call last):
 websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
 2025-02-05 19:15:34,396 - api.main - INFO - Task 836b8eec7a5428b231d72dd1fe63d2bee4982727 completed successfully
 2025-02-05 19:15:34,495 - api.main - INFO - Task c04e061de44df7a05bb121f09d4973efaadb63af completed successfully
+2025-02-05 19:19:42,427 - api.main - INFO - New task cb8342f4891086b2008b7a94ce163abe4ffb403c for URL: https://www.google.com/search?q=pizza
+2025-02-05 19:19:42,427 - api.main - INFO - New task ed591160474bcc854f3b990b5060e4d34efb0344 for URL: https://www.google.com/search?q=crab
+2025-02-05 19:20:07,962 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 19:20:08,322 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 19:20:08,946 - api.main - INFO - Task cb8342f4891086b2008b7a94ce163abe4ffb403c completed successfully
+2025-02-05 19:20:09,451 - api.main - INFO - Task ed591160474bcc854f3b990b5060e4d34efb0344 completed successfully
+2025-02-05 19:28:14,432 - api.main - INFO - New task 2f03501b706f8a0da6268d42b8edbac416242519 for URL: https://www.google.com/search?q=crab
+2025-02-05 19:28:14,436 - api.main - INFO - New task 25d67fe6b5f5a73fa8db8398fa5c452a3ac7768f for URL: https://www.google.com/search?q=pizza
+2025-02-05 19:28:40,085 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 19:28:40,485 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 19:28:40,867 - api.main - INFO - Task 2f03501b706f8a0da6268d42b8edbac416242519 completed successfully
+2025-02-05 19:28:41,086 - api.main - INFO - Task 25d67fe6b5f5a73fa8db8398fa5c452a3ac7768f completed successfully
+2025-02-05 19:28:55,983 - api.main - INFO - New task 939627352de027e7508bfd24dfd56a4dfdf653dc for URL: https://www.google.com/search?q=pizza
+2025-02-05 19:28:55,984 - api.main - INFO - New task ab81c70108bfe9994a292a3904493d81e6052aec for URL: https://www.google.com/search?q=crab
+2025-02-05 19:29:21,558 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 19:29:21,862 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 19:29:22,631 - api.main - INFO - Task ab81c70108bfe9994a292a3904493d81e6052aec completed successfully
+2025-02-05 19:29:23,047 - api.main - INFO - Task 939627352de027e7508bfd24dfd56a4dfdf653dc completed successfully
+2025-02-05 19:34:11,763 - api.main - INFO - New task 5f0b5acd0a6cb5b8b8d718b634fc2264d51ad3ae for URL: https://www.google.com/search?q=crab
+2025-02-05 19:34:11,763 - api.main - INFO - New task d8c87ebeb4fcad0146a2b1b5aed7a18d602a93d6 for URL: https://www.google.com/search?q=pizza
+2025-02-05 19:34:37,255 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 19:34:37,657 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 19:34:37,887 - api.main - INFO - Task 5f0b5acd0a6cb5b8b8d718b634fc2264d51ad3ae completed successfully
+2025-02-05 19:34:38,360 - api.main - INFO - Task d8c87ebeb4fcad0146a2b1b5aed7a18d602a93d6 completed successfully
+2025-02-05 20:03:04,146 - api.main - INFO - New task 2a178c48649905aedeeccb1af1d8b604efa62700 for URL: https://www.google.com/search?q=crab
+2025-02-05 20:03:28,736 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:03:29,813 - api.main - INFO - Task 2a178c48649905aedeeccb1af1d8b604efa62700 completed successfully
+2025-02-05 20:04:15,294 - api.main - INFO - New task eeeb1da8085ef4ad4000d60cbbdd4c27cd4b99e5 for URL: https://www.google.com/search?q=crab
+2025-02-05 20:04:41,283 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:04:42,526 - api.main - INFO - Task eeeb1da8085ef4ad4000d60cbbdd4c27cd4b99e5 completed successfully
+2025-02-05 20:12:20,454 - api.main - INFO - New task 1384f9216c98ff8c19c78023e651137af8773bf0 for URL: https://www.google.com/search?q=crab
+2025-02-05 20:12:46,112 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:12:46,652 - api.main - INFO - Task 1384f9216c98ff8c19c78023e651137af8773bf0 completed successfully
+2025-02-05 20:15:12,611 - api.main - INFO - New task d3eedffe41eb36d52387cb67c73ea1a3e02b4a7f for URL: https://www.google.com/search?q=crab
+2025-02-05 20:15:38,161 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:15:39,275 - api.main - INFO - Task d3eedffe41eb36d52387cb67c73ea1a3e02b4a7f completed successfully
+2025-02-05 20:15:49,516 - api.main - INFO - New task 9e0c1e04ea8d4785d43b0c401cbda7e7c7cabf90 for URL: https://www.google.com/search?q=crab
+2025-02-05 20:16:15,176 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:16:16,337 - api.main - INFO - Task 9e0c1e04ea8d4785d43b0c401cbda7e7c7cabf90 completed successfully
+2025-02-05 20:20:20,749 - api.main - INFO - New task e0bc493af4396ba56f2d752884fe3ab3b3095e1f for URL: https://www.google.com/search?q=crab
+2025-02-05 20:20:46,704 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:20:47,412 - api.main - INFO - Task e0bc493af4396ba56f2d752884fe3ab3b3095e1f completed successfully
+2025-02-05 20:21:25,060 - api.main - INFO - New task 4979eaac57d6e3a42173c6d573d63cbc7f61c0ca for URL: https://www.google.com/search?q=crab
+2025-02-05 20:21:50,664 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:21:51,748 - api.main - INFO - Task 4979eaac57d6e3a42173c6d573d63cbc7f61c0ca completed successfully
+2025-02-05 20:33:47,827 - api.main - INFO - New task a22692ed93295c888de3eefd1798631f09489a40 for URL: https://www.google.com/search?q=crab
+2025-02-05 20:34:13,519 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:34:14,504 - api.main - INFO - Task a22692ed93295c888de3eefd1798631f09489a40 completed successfully
+2025-02-05 20:35:24,485 - api.main - INFO - New task 59e96370a2505cbb6aecfbfc17c24426c1a55ff9 for URL: https://www.google.com/search?q=crab
+2025-02-05 20:35:50,141 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:35:51,119 - api.main - INFO - Task 59e96370a2505cbb6aecfbfc17c24426c1a55ff9 completed successfully
+2025-02-05 20:43:25,802 - api.main - INFO - New task 6436e5da79ce80ffb924e853dc601a084ed6c3b6 for URL: https://www.google.com/search?q=%22Wallbox%22+AND+%28%22Charging%22+OR+%22EV+Charging%22+OR+%22Charger%22%29+AND+%222025%22&start=0&hl=gl&gl=US&num=10&filter=0
+2025-02-05 20:43:50,726 - pychrome.tab - ERROR - websocket exception
+Traceback (most recent call last):
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/pychrome/tab.py", line 121, in _recv_loop
+    message_json = self._ws.recv()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 388, in recv
+    opcode, data = self.recv_data()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 416, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 437, in recv_data_frame
+    frame = self.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 478, in recv_frame
+    return self.frame_buffer.recv_frame()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 363, in recv_frame
+    self.recv_header()
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 319, in recv_header
+    header = self.recv_strict(2)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_abnf.py", line 398, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_core.py", line 563, in _recv
+    return recv(self.sock, bufsize)
+  File "/Users/administrator/Library/Python/3.9/lib/python/site-packages/websocket/_socket.py", line 132, in recv
+    raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+websocket._exceptions.WebSocketConnectionClosedException: Connection to remote host was lost.
+2025-02-05 20:43:51,790 - api.main - INFO - Task 6436e5da79ce80ffb924e853dc601a084ed6c3b6 completed successfully

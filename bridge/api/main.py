@@ -67,6 +67,7 @@ class TaskResponse(BaseModel):
     id: str
     status: TaskStatus
     bypass_method: BypassMethod
+    headers: Optional[Dict[str, str]] = None
     cookies: Optional[Dict[str, str]] = None
     curl_command: Optional[str] = None
     error: Optional[str] = None
@@ -99,10 +100,23 @@ async def create_task(
         task: TaskRequest, 
         token: str = Depends(verify_token)
     ):
+    # 1. Count tasks in PENDING or IN_PROGRESS
+    active_tasks = sum(
+        1 for t in task_store.values()
+        if t["status"] in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
+    )
+
+    # 2. Reject if we have 2 or more already in progress
+    if active_tasks >= 2:
+        raise HTTPException(
+            status_code=429,
+            detail="Over-capacity: too many tasks in progress. Please retry later."
+        )
+
+    # Otherwise proceed to create a new task
     task_id = generate_task_id()
     logger.info(f"New task {task_id} for URL: {task.url}")
 
-    # Initialize task in store immediately
     initial_response = TaskResponse(
         id=task_id,
         status=TaskStatus.PENDING,
@@ -127,7 +141,6 @@ async def create_task(
                 "error": str(e)
             })
 
-    # Start task in background
     asyncio.create_task(timeout_wrapper())
 
     return initial_response
@@ -152,13 +165,14 @@ async def execute_bypass(task_id: str, task: TaskRequest):
         )
         
         # Execute bypass in thread pool
-        page_content, cookies, curl_command = await loop.run_in_executor(
+        page_content, cookies, headers, curl_command = await loop.run_in_executor(
             None, handler.bypass
         )
         
         # Update task store with success
         task_store[task_id].update({
             "status": TaskStatus.DONE,
+            "headers": headers,
             "cookies": cookies,
             "curl_command": curl_command
         })

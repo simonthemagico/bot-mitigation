@@ -64,6 +64,9 @@ class GoogleSearchBypass(BaseBypass):
             cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies_list}
             print("Cookies Retrieved:", cookie_dict)
 
+            # Fetch the headers
+            headers_dict = {k: v for k, v in captured_headers.items() if k.lower() not in ['cookie']}
+
             # Get the page content
             result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
             page_content = result.get("result", {}).get("value", "")
@@ -85,7 +88,7 @@ class GoogleSearchBypass(BaseBypass):
 
             assert all([page_content, cookie_dict, curl_command])
 
-            return page_content, cookie_dict, curl_command
+            return page_content, cookie_dict, headers_dict, curl_command
         
         except Exception as e:
             print(f"Error during operation: {e}")
