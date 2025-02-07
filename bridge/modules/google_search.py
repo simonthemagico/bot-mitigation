@@ -55,8 +55,8 @@ class GoogleSearchBypass(BaseBypass):
             print(f"Navigating to URL: {self.url}")
             tab.Page.navigate(url=self.url)
             
-            print('Waiting 10 seconds')
-            time.sleep(10)
+            print('Waiting 5 seconds')
+            time.sleep(5)
             print('Waiting done')
 
             # Fetch the cookies
