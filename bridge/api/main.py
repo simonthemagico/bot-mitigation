@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Security, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 
 from pydantic import BaseModel
 from typing import Optional, Dict
@@ -86,6 +87,9 @@ app = FastAPI(
     description="JS browser bypass API",
     version="1.0.0"
 )
+
+# Serve static files for Let's Encrypt (no auth required)
+app.mount("/.well-known/acme-challenge", StaticFiles(directory="/opt/homebrew/var/www/.well-known/acme-challenge"), name="acme-challenge")
 
 # Simple in-memory store
 task_store = {}
