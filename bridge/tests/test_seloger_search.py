@@ -9,7 +9,7 @@ def test_seloger_bypass():
     print("=== Testing Google Search Bypass ===")
     
     bypass = SeLogerSearchBypass(
-        proxy_pool="http://user-sp0e9f6467:08yf0pO2avT_mbiJNp@dc.smartproxy.com:20004",
+        proxy_pool="http://sp0e9f6467:EWXv1a50bXfxc3vnsw@fr.smartproxy.com:40001",
         url="https://www.seloger.com/list.htm?projects=1&types=1&places=[{%22inseeCodes%22:[350238]}]&mandatorycommodities=0&enterprise=0&qsVersion=1.0&m=search_refine-redirection-search_results",
         task_id="selogertest123",
         headless=False 

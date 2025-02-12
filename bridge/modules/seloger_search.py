@@ -42,12 +42,30 @@ class SeLogerSearchBypass(BaseBypass):
             
             tab.Network.requestWillBeSent = request_intercept
 
-            input('mmm')
-
             print(f"Navigating to URL: {self.url}")
             tab.Page.navigate(url=self.url)
-            time.sleep(5)
+            time.sleep(15)
 
+            input('next1?')
+
+            # Scroll down to the pagination section
+            print(f"Starting scrolling...")
+            pagination_exists = tab.Runtime.evaluate(expression="document.querySelector('[data-testid=\"gsl.uilib.Paging\"]') !== null")
+            if pagination_exists.get('result', {}).get('value', False):
+                tab.Runtime.evaluate(expression="document.querySelector('[data-testid=\"gsl.uilib.Paging\"]').scrollIntoView({behavior: 'smooth', block: 'center'})")
+                time.sleep(3)
+
+            input('next2?')
+
+            # Check if the next page button exists and click it
+            next_page_button = tab.Runtime.evaluate(expression="document.querySelector('[data-testid=\"gsl.uilib.Paging.nextButton\"]') !== null")
+            if next_page_button.get("result", {}).get("value", False):
+                print("Clicking next page...")
+                tab.Runtime.evaluate(expression="document.querySelector('[data-testid=\"gsl.uilib.Paging.nextButton\"]').click()")
+                time.sleep(5)
+
+            input('next3?')
+            
             print("Fetching cookies...")
             cookies_list = tab.Network.getCookies()["cookies"]
             cookie_dict = {cookie["name"]: cookie["value"] for cookie in cookies_list}

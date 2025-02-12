@@ -51,6 +51,7 @@ class ChromeManager:
             proxy_port, 
             chrome_port, 
             extension_path="extensions/capsolver",
+            adblock_extension_path="extensions/ublock",
             user_data_dir=None,
             headless=True, 
             command=None
@@ -74,11 +75,24 @@ class ChromeManager:
         self.bridge_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
         if command is None:
-            self._setup_chrome_command(proxy_port, chrome_port, extension_path, user_data_dir)
+            self._setup_chrome_command(
+                proxy_port, 
+                chrome_port, 
+                extension_path, 
+                adblock_extension_path, 
+                user_data_dir
+            )
         else:
             self.command = command
 
-    def _setup_chrome_command(self, proxy_port, chrome_port, extension_path, user_data_dir):
+    def _setup_chrome_command(
+            self, 
+            proxy_port, 
+            chrome_port, 
+            extension_path, 
+            adblock_extension_path,
+            user_data_dir
+        ):
         """Set up Chrome command with all necessary arguments"""
         chrome_path = get_chrome_path()
 
@@ -89,7 +103,16 @@ class ChromeManager:
             "--no-first-run",
             "--no-default-browser-check", 
             "--disable-gpu", 
-            "--password-store=basic"
+            "--password-store=basic", 
+
+            "--disable-renderer-accessibility", 
+            # "--disable-dev-shm-usage", 
+            # "--disable-software-rasterizer", 
+            # "--disable-features=site-per-process", 
+            # "--disable-background-networking", 
+            # "--disable-default-apps", 
+            "--disable-translate", 
+            # "--disable-blink-features=AutomationControlled"
         ]
 
         # Handle profile directory
@@ -102,17 +125,21 @@ class ChromeManager:
         else:
             self.command.append("--incognito")
 
-        # Handle extension - always resolve relative to bridge root
-        if extension_path:
-            if not os.path.isabs(extension_path):
-                extension_path = os.path.join(self.bridge_root, extension_path)
-            if os.path.exists(extension_path):
-                self.command.extend([
-                    f"--load-extension={extension_path}",
-                    f"--disable-extensions-except={extension_path}"
-                ])
-            else:
-                raise FileNotFoundError(f"Extension not found: {extension_path}")
+        # Handle extensions - always resolve relative to bridge root
+        extensions = []
+        for path in [
+            extension_path, 
+            adblock_extension_path
+        ]: 
+            if path:
+                if not os.path.isabs(path):
+                    path = os.path.join(self.bridge_root, path)
+                if os.path.exists(path):
+                    extensions.append(path)
+                else:
+                    raise FileNotFoundError(f"Extension not found: {path}")
+        if extensions:
+            self.command.append(f"--load-extension={','.join(extensions)}")
 
         if self.headless:
             self.command.append("--headless")
