@@ -6,4 +6,4 @@ python-multipart
 requests
 proxy.py
 proxy
-python-dotenv    
+python-dotenv

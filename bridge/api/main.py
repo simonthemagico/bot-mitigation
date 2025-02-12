@@ -13,6 +13,7 @@ import secrets
 import re
 
 from modules.google_search import GoogleSearchBypass
+from modules.seloger_search import SeLogerSearchBypass
 
 VALID_TOKENS = {
     "77f6bc041b99accf93093ebdc67a45ef472a4496"
@@ -44,11 +45,8 @@ logger = logging.getLogger(__name__)
 
 # Enums for task types and statuses
 class BypassMethod(str, Enum):
-    GOOGLE_SEARCH = "google_search"  # Your current method
-    # Future methods:
-    # LINKEDIN = "linkedin"
-    # FACEBOOK = "facebook"
-    # AMAZON = "amazon"
+    GOOGLE_SEARCH = "google_search"
+    SELOGER_SEARCH = "seloger_search"
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
@@ -76,9 +74,7 @@ class TaskResponse(BaseModel):
 # Handler mapping
 BYPASS_HANDLERS = {
     BypassMethod.GOOGLE_SEARCH: GoogleSearchBypass,
-    # Add more handlers as we implement them:
-    # BypassMethod.AMAZON: AmazonBypass,
-    # BypassMethod.LINKEDIN: LinkedInBypass,
+    BypassMethod.SELOGER_SEARCH: SeLogerSearchBypass
 }
 
 # Initialize FastAPI and task store
