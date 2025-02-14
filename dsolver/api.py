@@ -80,11 +80,23 @@ async def get_datadome(request: Request):
 
 @app.post("/createTask")
 async def create_task(request: Request):
-    data = await request.json()
+    if not await request.body():
+        return {
+            "errorId": 1,
+            "errorCode": "ERROR_EMPTY_BODY",
+            "errorDescription": "Request body is empty"
+        }
+    try:
+        data = await request.json()
+    except:
+        return {
+            "errorId": 1,
+            "errorCode": "ERROR_INVALID_JSON",
+            "errorDescription": "Invalid JSON body"
+        }
     
     # Extract data from new format
     task_data = data.get('task', {})
-    print(task_data)
     if not task_data or 'websiteURL' not in task_data or 'captchaUrl' not in task_data:
         return {
             "errorId": 1,
@@ -240,4 +252,4 @@ async def response(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=API_PORT)
+    uvicorn.run(app, host="0.0.0.0", port=API_PORT, http="h11")
