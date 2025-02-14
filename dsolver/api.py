@@ -8,14 +8,18 @@ from fastapi import FastAPI, Request, Response
 from tasks import tasks, process_url, handle_captcha
 from config import CHROME_PATH, CHROME_PORT, API_PORT, previous_dir
 from utils import fix_proxy
+from logger import app_logger
 
 os.system(f'"{CHROME_PATH}" --remote-debugging-port={CHROME_PORT} --load-extension={previous_dir}/extensionv2 --user-data-dir={previous_dir}/user-data-dir &')
 app = FastAPI()
 
 @app.get('/render')
 def render(request: Request):
+    app_logger.info("Received /render request with query params: %s", request.query_params)
     data = request.query_params
-    hash_ = data['hash']
+    hash_ = data.get('hash')
+    if not hash_:
+        app_logger.error("Missing 'hash' parameter in /render request")
     html = f"""
     <html>
     <script>
@@ -28,59 +32,15 @@ def render(request: Request):
     </script>
     </html>
     """
+    app_logger.info("Returning HTML response for /render with hash: %s", hash_)
     return Response(content=html, media_type="text/html")
 
-@app.post("/verify-browser")
-async def verify_browser(request: Request):
-    data = await request.json()
-    required_fields = ['url', 'cid', 'proxy']
-    if not all(field in required_fields for field in data):
-        return {
-           "error": "MISSING_PARAMETER",
-           "message": f"Missing Field found",
-           "required": required_fields
-        }
-    url = data['url']
-    cid = data['cid']
-    proxy = data['proxy']
-    task_id = str(uuid4())
-    tasks[task_id] = {
-        'status': 'pending',
-        'value': None,
-        'cid': cid,
-        'url': url,
-    }
-    func = process_url
-    args = (task_id, cid, proxy)
-    if 'captcha-delivery' in url:
-        func = handle_captcha
-        args = (url, cid, CHROME_PORT, tasks[task_id])
-    t = threading.Thread(target=func, args=args)
-    t.start()
-    tasks[task_id]['status'] = 'processing'
-    return {
-        'task_id': task_id,
-    }
-
-@app.post("/get-payload")
-async def get_datadome(request: Request):
-    data = await request.json()
-    task_id = data['task_id']
-    if task_id not in tasks:
-        return {
-            'status': 'error',
-            'value': 'task_id not found',
-            'task_id': task_id,
-        }
-    return {
-        'status': tasks[task_id]['status'],
-        'value': tasks[task_id]['value'],
-        'task_id': task_id,
-    }
 
 @app.post("/createTask")
 async def create_task(request: Request):
+    app_logger.info("Received /createTask request.")
     if not await request.body():
+        app_logger.error("Empty request body in /createTask")
         return {
             "errorId": 1,
             "errorCode": "ERROR_EMPTY_BODY",
@@ -88,7 +48,8 @@ async def create_task(request: Request):
         }
     try:
         data = await request.json()
-    except:
+    except Exception as e:
+        app_logger.error("Invalid JSON in /createTask: %s", e)
         return {
             "errorId": 1,
             "errorCode": "ERROR_INVALID_JSON",
@@ -98,6 +59,7 @@ async def create_task(request: Request):
     # Extract data from new format
     task_data = data.get('task', {})
     if not task_data or 'websiteURL' not in task_data or 'captchaUrl' not in task_data:
+        app_logger.error("Missing required task parameters in /createTask: %s", task_data)
         return {
             "errorId": 1,
             "errorCode": "ERROR_PARAMETER_MISSING",
@@ -110,7 +72,6 @@ async def create_task(request: Request):
 
     # Extract proxy details
     if 'proxyAddress' in task_data:
-        # Extract proxy details
         proxy = {
             'host': task_data.get('proxyAddress'),
             'port': task_data.get('proxyPort'),
@@ -118,6 +79,7 @@ async def create_task(request: Request):
             'password': task_data.get('proxyPassword')
         }
         if not all([proxy['host'], proxy['port']]):
+            app_logger.error("Invalid proxy configuration in /createTask: %s", proxy)
             return {
                 "errorId": 1,
                 "errorCode": "ERROR_PROXY_CONFIGURATION",
@@ -126,6 +88,7 @@ async def create_task(request: Request):
     elif 'proxy' in task_data:
         proxy = task_data['proxy']
     else:
+        app_logger.error("Missing proxy configuration in /createTask")
         return {
             "errorId": 1,
             "errorCode": "ERROR_PROXY_MISSING",
@@ -139,31 +102,37 @@ async def create_task(request: Request):
         'value': None,
         'cid': cid,
         'url': url,
+        'task_id': task_id
     }
+    app_logger.info("Created new task with id: %s via /createTask", task_id)
 
     # Handle task processing
     func = process_url
-    args = (task_id, cid, proxy)
+    args = (proxy, tasks[task_id])
     if 'captcha-delivery' in url:
+        app_logger.info("Detected captcha delivery URL in /createTask for task id: %s", task_id)
         func = handle_captcha
         args = (url, cid, CHROME_PORT, tasks[task_id])
-
+        
     t = threading.Thread(target=func, args=args)
     t.start()
     tasks[task_id]['status'] = 'processing'
 
+    app_logger.info("Started processing task: %s via /createTask", task_id)
     return {
         'errorId': 0,
         'status': 'processing',
         'taskId': task_id
     }
 
+
 @app.post("/getTaskResult")
 async def get_task_result(request: Request):
+    app_logger.info("Received /getTaskResult request.")
     data = await request.json()
     
-    # Validate input
     if 'taskId' not in data:
+        app_logger.error("Missing parameter 'taskId' in /getTaskResult request: %s", data)
         return {
             "errorId": 1,
             "errorCode": "ERROR_PARAMETER_MISSING",
@@ -171,7 +140,9 @@ async def get_task_result(request: Request):
         }
     
     task_id = data['taskId']
+    app_logger.info("Processing getTaskResult for task_id: %s", task_id)
     if task_id not in tasks:
+        app_logger.error("Task %s not found in /getTaskResult", task_id)
         return {
             "errorId": 1,
             "errorCode": "ERROR_TASK_NOT_FOUND",
@@ -180,15 +151,15 @@ async def get_task_result(request: Request):
     
     task = tasks[task_id]
     
-    # If task is still processing
     if task['status'] == 'processing':
+        app_logger.info("Task %s is still processing", task_id)
         return {
             "errorId": 0,
             "status": "processing"
         }
 
-    # If task is ready
     if task['status'] == 'ready':
+        app_logger.info("Task %s is ready. Preparing solution.", task_id)
         value = task['value']
         if isinstance(value, str) and value.startswith('http'):
             solution = {'url': value}
@@ -203,22 +174,26 @@ async def get_task_result(request: Request):
         }
 
     if task['status'] == 'blocked':
+        app_logger.warning("Task %s is blocked: proxy banned", task_id)
         return {
             "errorId": 1,
             "errorCode": "ERROR_PROXY_BANNED",
             "errorDescription": "Proxy is banned, please change your proxy"
         }
 
-    # If task failed
+    app_logger.error("Task %s processing failed", task_id)
     return {
         "errorId": 1,
         "errorCode": "ERROR_TASK_FAILED",
         "errorDescription": "Task processing failed"
     }
 
+
 @app.post("/v1/response")
 async def response(request: Request):
+    app_logger.info("Received /v1/response request.")
     data = await request.json()
+    app_logger.info("Data received in /v1/response: %s", data)
     print(data)
     body = data['body']
     payload = body['payload']
@@ -247,8 +222,11 @@ async def response(request: Request):
             task['payload'] = payload
             if payload == 'blocked':
                 task['status'] = 'blocked'
+                app_logger.warning("Task with cid %s set to blocked due to payload", cid)
             else:
                 task['status'] = 'ready'
+                app_logger.info("Task with cid %s set to ready", cid)
+
 
 if __name__ == "__main__":
     import uvicorn
