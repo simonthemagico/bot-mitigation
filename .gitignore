@@ -5,3 +5,5 @@ datadome-solve-api/fingerprints/*
 datadome-solve-api/.sentry-native
 dsolver/files/*
 user-data-dir/
+logs
+.scratch
