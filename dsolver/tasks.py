@@ -19,13 +19,14 @@ def handle_captcha(url: str, cid: str, port: int, task: Dict):
         if task['status'] != 'ready':
             task['status'] = 'error'
             task['value'] = 'timeout'
-        tab.stop()
-        browser.close_tab(tab)
     except Exception as e:
         print(traceback.format_exc())
         task['status'] = 'error'
         task['value'] = str(e)
         raise e
+    finally:
+        tab.stop()
+        browser.close_tab(tab)
 
 def process_url(task_id: str, cid: str, proxy: str):
     tmpdirname = tempfile.mkdtemp()
