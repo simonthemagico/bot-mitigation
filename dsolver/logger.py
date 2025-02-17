@@ -1,7 +1,6 @@
 import os
 import logging
 from datetime import datetime
-from typing import Optional
 from config import current_dir
 
 # Create logs directory if it doesn't exist
@@ -34,15 +33,12 @@ def get_task_logger(task_id: str) -> logging.Logger:
 
     # Create task-specific directory with timestamp
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    task_dir = os.path.join(LOGS_DIR, f'{task_id}_{timestamp}')
-    os.makedirs(task_dir, exist_ok=True)
 
     logger.setLevel(logging.INFO)
     logger.propagate = False
 
-    # Create task-specific file handler
-    task_log_path = os.path.join(task_dir, 'task.log')
-    handler = logging.FileHandler(task_log_path)
+    # Create task-specific stream handler
+    handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(
         '%(asctime)s - %(levelname)s - %(message)s'
     ))

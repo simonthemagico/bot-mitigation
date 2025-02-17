@@ -1,14 +1,20 @@
 import os
 import threading
+from typing import Dict, Any
 
 from urllib.parse import unquote
 from uuid import uuid4
 from fastapi import FastAPI, Request, Response
 
-from tasks import tasks, process_url, handle_captcha
+from tasks import process_url, handle_captcha
 from config import CHROME_PATH, CHROME_PORT, API_PORT, previous_dir
 from utils import fix_proxy
 from logger import app_logger
+from task_cleaner import TaskCleaner
+
+tasks: Dict[str, Dict[str, Any]] = {}
+task_cleaner = TaskCleaner(tasks)
+task_cleaner.start()
 
 os.system(f'"{CHROME_PATH}" --remote-debugging-port={CHROME_PORT} --load-extension={previous_dir}/extensionv2 --user-data-dir={previous_dir}/user-data-dir &')
 app = FastAPI()
@@ -104,6 +110,7 @@ async def create_task(request: Request):
         'url': url,
         'task_id': task_id
     }
+
     app_logger.info("Created new task with id: %s via /createTask", task_id)
 
     # Handle task processing
@@ -117,6 +124,7 @@ async def create_task(request: Request):
     t = threading.Thread(target=func, args=args)
     t.start()
     tasks[task_id]['status'] = 'processing'
+    task_cleaner.add_task(task_id, t)
 
     app_logger.info("Started processing task: %s via /createTask", task_id)
     return {
@@ -150,10 +158,14 @@ async def get_task_result(request: Request):
         }
     
     task = tasks[task_id]
-    
+    response = {
+        "errorId": 1,
+        "errorCode": "ERROR_TASK_FAILED",
+        "errorDescription": "Task processing failed"
+    }
     if task['status'] == 'processing':
         app_logger.info("Task %s is still processing", task_id)
-        return {
+        response = {
             "errorId": 0,
             "status": "processing"
         }
@@ -167,7 +179,7 @@ async def get_task_result(request: Request):
             solution = {'interstitial': value}
         else:
             solution = {'cookie': task['payload']}
-        return {
+        response = {
             "errorId": 0,
             "status": "ready",
             "solution": solution
@@ -175,19 +187,17 @@ async def get_task_result(request: Request):
 
     if task['status'] == 'blocked':
         app_logger.warning("Task %s is blocked: proxy banned", task_id)
-        return {
+        response = {
             "errorId": 1,
             "errorCode": "ERROR_PROXY_BANNED",
             "errorDescription": "Proxy is banned, please change your proxy"
         }
 
-    app_logger.error("Task %s processing failed", task_id)
-    return {
-        "errorId": 1,
-        "errorCode": "ERROR_TASK_FAILED",
-        "errorDescription": "Task processing failed"
-    }
-
+    if response.get('errorCode') == 'ERROR_TASK_FAILED':
+        app_logger.error("Task %s processing failed", task_id)
+    if task['status'] in ['ready', 'error', 'blocked']:
+        task_cleaner.remove_task(task_id)
+    return response
 
 @app.post("/v1/response")
 async def response(request: Request):
@@ -227,6 +237,10 @@ async def response(request: Request):
                 task['status'] = 'ready'
                 app_logger.info("Task with cid %s set to ready", cid)
 
+# Add cleanup on shutdown
+@app.on_event("shutdown")
+async def shutdown_event():
+    task_cleaner.stop()
 
 if __name__ == "__main__":
     import uvicorn
