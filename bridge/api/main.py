@@ -35,6 +35,9 @@ async def verify_token(authorization: str = Header(None)):
 # Constant for timeout
 TIMEOUT = 30  # seconds
 
+# Constant for max concurrent tasks
+MAX_TASKS = 3
+
 # Set up logging
 logging.basicConfig(
     filename='logs/bridge.log',
@@ -106,8 +109,8 @@ async def create_task(
         if t["status"] in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
     )
 
-    # 2. Reject if we have 2 or more already in progress
-    if active_tasks >= 2:
+    # 2. Reject if we outpace MAX_TASKS limit
+    if active_tasks >= MAX_TASKS:
         raise HTTPException(
             status_code=429,
             detail="Over-capacity: too many tasks in progress. Please retry later."
