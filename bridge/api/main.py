@@ -36,7 +36,7 @@ async def verify_token(authorization: str = Header(None)):
 TIMEOUT = 30  # seconds
 
 # Constant for max concurrent tasks
-MAX_TASKS = 3
+MAX_TASKS = 4
 
 # Set up logging
 logging.basicConfig(
