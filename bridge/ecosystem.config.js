@@ -11,7 +11,30 @@ module.exports = {
           // "MY_ENV_VAR": "some_value"
         },
         watch: false
-      }
+      }, 
+      {
+        // New entry for cleanup logs
+        name: "cleanup-logs",
+        script: "python3",                    // Command to run (python)
+        args: "utils/cleanup_logs.py",        // The actual script to run
+        cwd: "/Users/administrator/bot-mitigation/bridge",
+        interpreter: null,                    // 'null' means use 'script' directly; 
+                                             // or keep 'python3' for 'interpreter'
+        // Run once a day at 2:00 AM
+        cron_restart: "0 2 * * *",
+        autorestart: false,                   // Don't keep it running continuously
+        watch: false
+      }, 
+      {
+        name: "cleanup-chrome-profiles",
+        script: "python3",
+        args: "utils/cleanup_chrome_profiles.py",
+        cwd: "/Users/administrator/bot-mitigation/bridge",
+        interpreter: null,           // or "python3"
+        cron_restart: "0 2 * * *",   // run daily at 2 AM
+        autorestart: false,          // it shouldn't keep running
+        watch: false
+      }  
     ]
   };
   

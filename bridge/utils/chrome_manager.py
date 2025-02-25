@@ -70,6 +70,7 @@ class ChromeManager:
         self.temp_dir_path = tempfile.gettempdir()
         self.headless = headless
         self.chrome_process = None
+        self.user_data_dir = user_data_dir
 
         # Get bridge root directory (two levels up from chrome_manager.py)
         self.bridge_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -180,16 +181,18 @@ class ChromeManager:
     def close_chrome(self):
         """Clean up Chrome process and temporary files"""
         try:
+            # 1) Terminate Chrome if running
             if self.chrome_process:
                 self.chrome_process.terminate()
                 self.chrome_process.wait(timeout=5)
 
-            if "--incognito" in self.command:
-                for user_dir in self._get_chrome_user_dirs():
-                    shutil.rmtree(user_dir, ignore_errors=True)
-            
-            # Thread unsafe
-            # subprocess.run(["pkill", "-f", "google-chrome"], check=False)
+            # 2) If we used an explicit user_data_dir, remove it
+            if self.user_data_dir and os.path.exists(self.user_data_dir):
+                print(f"Removing profile directory: {self.user_data_dir}")
+                shutil.rmtree(self.user_data_dir, ignore_errors=True)
+
+            # If we used incognito mode, we might not need to do anything
+            # because no persistent profile folder was created.
 
         except Exception as e:
             print(f"Error during cleanup: {e}")
