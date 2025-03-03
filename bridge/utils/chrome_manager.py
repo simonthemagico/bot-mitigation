@@ -106,14 +106,14 @@ class ChromeManager:
             "--disable-gpu", 
             "--password-store=basic", 
 
+            # Disable images to save bandwidth
+            "--blink-settings=imagesEnabled=false",
+            "--disable-image-loading",
+            "--disable-images",
+
+            # Existing performance flags
             "--disable-renderer-accessibility", 
-            # "--disable-dev-shm-usage", 
-            # "--disable-software-rasterizer", 
-            # "--disable-features=site-per-process", 
-            # "--disable-background-networking", 
-            # "--disable-default-apps", 
-            "--disable-translate", 
-            # "--disable-blink-features=AutomationControlled"
+            "--disable-translate"
         ]
 
         # Handle profile directory
