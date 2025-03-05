@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 class BypassMethod(str, Enum):
     GOOGLE_SEARCH = "google_search"
     SELOGER_SEARCH = "seloger_search"
+    LOUISVUITTON_SEARCH = "louisvuitton_search"
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
