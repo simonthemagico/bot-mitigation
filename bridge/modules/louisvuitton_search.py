@@ -1,5 +1,7 @@
 import time
 import pychrome
+import json
+import os
 from .base import BaseBypass
 
 class LouisVuittonSearchByPass(BaseBypass):
@@ -14,13 +16,25 @@ class LouisVuittonSearchByPass(BaseBypass):
         self.initialize()
 
     def bypass(self):
+        valid_cookies = [
+            'bm_ss',
+            '_abck',
+            'ak_bmsc',
+            'bm_s',
+            'bm_sc',
+            'bm_so',
+            'bm_sz',
+            'ak_cy',
+            'ak_cc',
+            'ak_rc',
+            'bm_lso'
+        ]
+
         try:
             print("Starting Proxy Server...")
-            # Start your local proxy server that manages the proxies
             self.proxy_server.start_proxy_server()
 
             print("Starting Chrome Browser...")
-            # Launch Chrome via your self.chrome instance (defined in BaseBypass).
             self.chrome.create_chrome()
             time.sleep(5)
 
@@ -37,83 +51,83 @@ class LouisVuittonSearchByPass(BaseBypass):
             tab.Network.enable()
             tab.Page.enable()
 
-            # We’ll capture request headers from the main document request
+            # Capture request headers from the main document request
             captured_headers = {}
             def request_intercept(request, **kwargs):
-                # This fires whenever a request is about to be sent
-                # For "Playwright-like" logic, we only really care if it's the main document.
-                # But you could store all if you want, filtering by request['type'] or URL.
-                # Check request.get("type") or request["request"]["url"] as needed.
-                hdrs = request.get("request", {}).get("headers", {})
-                # We might store them globally
-                print("hdrs: ", hdrs)
-                for k, v in hdrs.items():
+                # Capture headers from the request
+                headers = request.get("headers", {})
+                # For simplicity, we update our global dict (overwriting if repeated)
+                for k, v in headers.items():
                     captured_headers[k] = v
 
             tab.Network.requestWillBeSent = request_intercept
 
-            print(f"Navigating first to a quick IP check or blank page if needed.")
+            print("Navigating first to a blank page...")
             tab.Page.navigate(url="about:blank")
             time.sleep(2)
 
             print(f"Navigating to URL: {self.url}")
             tab.Page.navigate(url=self.url)
 
-            # Now replicate the "Akamai challenge wait loop"
+            # Akamai challenge wait loop: check the DOM for 'var chlgeId'
             max_checks = 5
             for attempt in range(max_checks):
-                # Evaluate the DOM
                 result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
                 page_content = result.get("result", {}).get("value", "")
-
-                # If no 'var chlgeId', we assume challenge is passed
                 if "var chlgeId" not in page_content:
                     print(f"Akamai challenge seems passed (Attempt {attempt + 1}).")
                     break
-
                 print(f"[Attempt {attempt + 1}] Challenge present; waiting 3s to reload.")
                 time.sleep(3)
+            
+            # Optionally, wait a bit longer to ensure the page is fully loaded
+            print("Waiting an extra 5 seconds to ensure full page load...")
+            time.sleep(5)
 
-            # By now, either we passed or gave up after max checks
-            # We'll retrieve final HTML again
+            # Retrieve final HTML
             result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
-            page_content = result.get("result", {}).get("value", "")
-            print("Page Content Retrieved: ", len(str(page_content)))
+            final_html = result.get("result", {}).get("value", "")
+            print("Final HTML retrieved; length:", len(final_html))
 
-            # Use base class method to save content (if needed)
-            filepath = self.save_page_content(
-                content=page_content,
-                prefix="bypass"
-                )
+            # Save final HTML to file if needed
+            filepath = self.save_page_content(content=final_html, prefix="bypass")
+            print("Page content saved to:", filepath)
 
-            # Grab cookies
+            # Retrieve cookies
             raw_cookies = tab.Network.getCookies().get('cookies', [])
-            cookie_dict = {c['name']: c['value'] for c in raw_cookies}
+            all_cookies = {c['name']: c['value'] for c in raw_cookies}
+            print("Initial Cookies retrieved:", all_cookies)
 
-            # Filter out 'cookie' from captured_headers if you want
-            headers_dict = {
-                k: v for k, v in captured_headers.items()
-                if k.lower() not in ['cookie']
-             }
+            # Wait until all valid cookies are present, up to a maximum wait (e.g. 30 seconds)
+            wait_time = 0
+            max_wait = 30  # seconds
+            while not all(name in all_cookies for name in valid_cookies) and wait_time < max_wait:
+                print("Not all valid cookies present; waiting 3s...")
+                time.sleep(3)
+                wait_time += 3
+                raw_cookies = tab.Network.getCookies().get('cookies', [])
+                all_cookies = {c['name']: c['value'] for c in raw_cookies}
 
-            # Done. Return final HTML, cookies, and captured headers
-            print("Cookies:", cookie_dict)
-            print("Captured Headers:", captured_headers)
+            # Filter the cookies to only include the valid ones
+            cookie_dict = {name: all_cookies[name] for name in valid_cookies if name in all_cookies}
+            print("Filtered Cookies:", cookie_dict)
 
+            # Filter out 'cookie' from captured_headers (if present)
+            headers_dict = {k: v for k, v in captured_headers.items() if k.lower() != 'cookie'}
+            print("Captured Request Headers:", headers_dict)
 
-            # Format cookies for curl
+            # Generate a cURL command
             cookies_curl = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
             headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in captured_headers.items() if k.lower() not in ['cookie']])
             curl_command = f"curl -x {self.proxy_pool} '{self.url}' --cookie '{cookies_curl}' {headers_curl} -o ~/louisvuitton_test.html"
-
-
             print("\nGenerated cURL Command:")
             print(curl_command)
-            assert all([page_content, cookie_dict, curl_command])
-            return page_content, cookie_dict, headers_dict, curl_command
+
+            assert all([final_html, cookie_dict, curl_command])
+            return final_html, cookie_dict, headers_dict, curl_command
 
         except Exception as e:
-            print(f"Error during operation: {e}")
+            input(f"Error during operation: {e}")
             raise e
 
         finally:
