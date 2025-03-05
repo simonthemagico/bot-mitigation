@@ -6,6 +6,9 @@ from .base import BaseBypass
 
 class LouisVuittonSearchByPass(BaseBypass):
     def __init__(self, proxy_pool: str, url: str, task_id: str, headless: bool = True):
+        if not proxy_pool.startswith("http://") and not proxy_pool.startswith("https://"):
+            proxy_pool = "http://" + proxy_pool
+
         super().__init__(
             proxy_pool,
             url,
@@ -16,20 +19,6 @@ class LouisVuittonSearchByPass(BaseBypass):
         self.initialize()
 
     def bypass(self):
-        valid_cookies = [
-            'bm_ss',
-            '_abck',
-            'ak_bmsc',
-            'bm_s',
-            'bm_sc',
-            'bm_so',
-            'bm_sz',
-            'ak_cy',
-            'ak_cc',
-            'ak_rc',
-            'bm_lso'
-        ]
-
         try:
             print("Starting Proxy Server...")
             self.proxy_server.start_proxy_server()
@@ -86,45 +75,37 @@ class LouisVuittonSearchByPass(BaseBypass):
 
             # Retrieve final HTML
             result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
-            final_html = result.get("result", {}).get("value", "")
-            print("Final HTML retrieved; length:", len(final_html))
+            content = result.get("result", {}).get("value", "")
+            print("Final HTML retrieved; length:", len(content))
 
             # Save final HTML to file if needed
-            filepath = self.save_page_content(content=final_html, prefix="bypass")
+            filepath = self.save_page_content(content=content, prefix="bypass")
             print("Page content saved to:", filepath)
 
             # Retrieve cookies
             raw_cookies = tab.Network.getCookies().get('cookies', [])
             all_cookies = {c['name']: c['value'] for c in raw_cookies}
-            print("Initial Cookies retrieved:", all_cookies)
+            print("Initial Cookies retrieved:", bool(all_cookies))
 
-            # Wait until all valid cookies are present, up to a maximum wait (e.g. 30 seconds)
-            wait_time = 0
-            max_wait = 30  # seconds
-            while not all(name in all_cookies for name in valid_cookies) and wait_time < max_wait:
-                print("Not all valid cookies present; waiting 3s...")
-                time.sleep(3)
-                wait_time += 3
-                raw_cookies = tab.Network.getCookies().get('cookies', [])
-                all_cookies = {c['name']: c['value'] for c in raw_cookies}
+            raw_cookies = tab.Network.getCookies().get('cookies', [])
+            all_cookies = {c['name']: c['value'] for c in raw_cookies}
 
             # Filter the cookies to only include the valid ones
-            cookie_dict = {name: all_cookies[name] for name in valid_cookies if name in all_cookies}
-            print("Filtered Cookies:", cookie_dict)
+            cookie_dict = {name: all_cookies[name] for name in all_cookies}
+            print("Filtered Cookies:", bool(cookie_dict))
 
             # Filter out 'cookie' from captured_headers (if present)
             headers_dict = {k: v for k, v in captured_headers.items() if k.lower() != 'cookie'}
-            print("Captured Request Headers:", headers_dict)
+            print("Captured Request Headers: ", bool(headers_dict))
 
             # Generate a cURL command
             cookies_curl = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
-            headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in captured_headers.items() if k.lower() not in ['cookie']])
+            headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in headers_dict.items()])
             curl_command = f"curl -x {self.proxy_pool} '{self.url}' --cookie '{cookies_curl}' {headers_curl} -o ~/louisvuitton_test.html"
-            print("\nGenerated cURL Command:")
-            print(curl_command)
+            print("\nGenerated cURL Command")
 
-            assert all([final_html, cookie_dict, curl_command])
-            return final_html, cookie_dict, headers_dict, curl_command
+            assert all([content, cookie_dict, curl_command])
+            return content, cookie_dict, headers_dict, curl_command
 
         except Exception as e:
             input(f"Error during operation: {e}")
