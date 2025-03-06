@@ -14,6 +14,7 @@ import re
 
 from modules.google_search import GoogleSearchBypass
 from modules.seloger_search import SeLogerSearchBypass
+from modules.louisvuitton_search import LouisVuittonSearchByPass
 
 VALID_TOKENS = {
     "77f6bc041b99accf93093ebdc67a45ef472a4496"
@@ -78,7 +79,8 @@ class TaskResponse(BaseModel):
 # Handler mapping
 BYPASS_HANDLERS = {
     BypassMethod.GOOGLE_SEARCH: GoogleSearchBypass,
-    BypassMethod.SELOGER_SEARCH: SeLogerSearchBypass
+    BypassMethod.SELOGER_SEARCH: SeLogerSearchBypass,
+    BypassMethod.LOUISVUITTON_SEARCH: LouisVuittonSearchByPass
 }
 
 # Initialize FastAPI and task store
