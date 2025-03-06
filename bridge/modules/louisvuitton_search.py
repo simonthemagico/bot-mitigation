@@ -1,6 +1,5 @@
 import time
 import pychrome
-import json
 import os
 from .base import BaseBypass
 
@@ -40,17 +39,6 @@ class LouisVuittonSearchByPass(BaseBypass):
             tab.Network.enable()
             tab.Page.enable()
 
-            # Capture request headers from the main document request
-            captured_headers = {}
-            def request_intercept(request, **kwargs):
-                # Capture headers from the request
-                headers = request.get("headers", {})
-                # For simplicity, we update our global dict (overwriting if repeated)
-                for k, v in headers.items():
-                    captured_headers[k] = v
-
-            tab.Network.requestWillBeSent = request_intercept
-
             print("Navigating first to a blank page...")
             tab.Page.navigate(url="about:blank")
             time.sleep(2)
@@ -62,20 +50,20 @@ class LouisVuittonSearchByPass(BaseBypass):
             max_checks = 5
             for attempt in range(max_checks):
                 result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
-                page_content = result.get("result", {}).get("value", "")
+                page_content = result["result"]["value"]
                 if "var chlgeId" not in page_content:
                     print(f"Akamai challenge seems passed (Attempt {attempt + 1}).")
                     break
                 print(f"[Attempt {attempt + 1}] Challenge present; waiting 3s to reload.")
                 time.sleep(3)
-            
+
             # Optionally, wait a bit longer to ensure the page is fully loaded
             print("Waiting an extra 5 seconds to ensure full page load...")
             time.sleep(5)
 
             # Retrieve final HTML
             result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
-            content = result.get("result", {}).get("value", "")
+            content = result["result"]["value"]
             print("Final HTML retrieved; length:", len(content))
 
             # Save final HTML to file if needed
@@ -83,32 +71,36 @@ class LouisVuittonSearchByPass(BaseBypass):
             print("Page content saved to:", filepath)
 
             # Retrieve cookies
-            raw_cookies = tab.Network.getCookies().get('cookies', [])
-            all_cookies = {c['name']: c['value'] for c in raw_cookies}
-            print("Initial Cookies retrieved:", bool(all_cookies))
+            raw_cookies = tab.Network.getCookies()['cookies']
+            cookie_dict = {c['name']: c['value'] for c in raw_cookies}
+            print("Cookies retrieved:", bool(cookie_dict))
 
-            raw_cookies = tab.Network.getCookies().get('cookies', [])
-            all_cookies = {c['name']: c['value'] for c in raw_cookies}
+            # Use a set of default headers that mimic a working browser request
+            default_headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1"
+            }
+            headers_list = [f"-H '{k}: {v}'" for k, v in default_headers.items()]
+            headers_curl = " ".join(headers_list)
 
-            # Filter the cookies to only include the valid ones
-            cookie_dict = {name: all_cookies[name] for name in all_cookies}
-            print("Filtered Cookies:", bool(cookie_dict))
-
-            # Filter out 'cookie' from captured_headers (if present)
-            headers_dict = {k: v for k, v in captured_headers.items() if k.lower() != 'cookie'}
-            print("Captured Request Headers: ", bool(headers_dict))
-
-            # Generate a cURL command
+            # Generate a cURL command with cookies and --compressed flag
             cookies_curl = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
-            headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in headers_dict.items()])
-            curl_command = f"curl -x {self.proxy_pool} '{self.url}' --cookie '{cookies_curl}' {headers_curl} -o ~/louisvuitton_test.html"
-            print("\nGenerated cURL Command")
+            curl_command = (
+                f"curl -x {self.proxy_pool} '{self.url}' --cookie '{cookies_curl}' "
+                f"{headers_curl} --compressed -o ~/louisvuitton_test.html"
+            )
+            print("\nGenerated cURL Command:")
+            print(curl_command)
 
             assert all([content, cookie_dict, curl_command])
-            return content, cookie_dict, headers_dict, curl_command
+            return content, cookie_dict, default_headers, curl_command
 
         except Exception as e:
-            input(f"Error during operation: {e}")
+            print(f"Error during operation: {e}")
             raise e
 
         finally:
