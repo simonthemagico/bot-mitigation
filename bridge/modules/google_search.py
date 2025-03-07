@@ -12,7 +12,8 @@ class GoogleSearchBypass(BaseBypass):
             url, 
             task_id, 
             headless, 
-            user_data_dir=f"sasha_{task_id}", 
+            # user_data_dir=f"sasha_{task_id}",
+            user_data_dir="sasha",
             extension_path="extensions/capsolver", 
             disable_images=False
         )
@@ -58,7 +59,48 @@ class GoogleSearchBypass(BaseBypass):
             
             print('Waiting 5 seconds')
             time.sleep(5)
+
+            # Check for captcha presence on the page
+            print('Checking for captcha...')
+            captcha_check_start = time.time()
+            captcha_timeout = 100  # 100 seconds timeout
+            
+            while time.time() - captcha_check_start < captcha_timeout:
+                # Execute JavaScript to check for common captcha elements - simplified to return true/false
+                result = tab.Runtime.evaluate(
+                    expression="""
+                    (function() {
+                        // Check for Google reCAPTCHA
+                        const recaptcha = document.querySelector('.g-recaptcha') || 
+                                         document.querySelector('iframe[src*="recaptcha"]') ||
+                                         document.querySelector('iframe[src*="captcha"]');
+                        
+                        // Check for common captcha text indicators
+                        const captchaText = document.body.innerText.toLowerCase().includes('captcha') ||
+                                           document.body.innerText.toLowerCase().includes('robot check') ||
+                                           document.body.innerText.toLowerCase().includes('security check');
+                        
+                        // Check for typical captcha input elements
+                        const captchaInput = document.querySelector('input[name*="captcha"]') ||
+                                            document.querySelector('img[alt*="captcha"]');
+                        
+                        return !!(recaptcha || captchaText || captchaInput);
+                    })();
+                    """
+                )
+                
+                has_captcha = result.get("result", {}).get("value", False)
+                
+                if has_captcha:
+                    print("Captcha detected! Waiting...")
+                    time.sleep(1)  # Check again in 1 second
+                else:
+                    print("No captcha detected, proceeding.")
+                    break
+            
             print('Waiting done')
+            # Waiting after Captcha solved
+            time.sleep(5)
 
             # Fetch the cookies
             cookies_list = tab.Network.getCookies()['cookies']
