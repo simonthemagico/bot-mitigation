@@ -38,6 +38,17 @@ class LouisVuittonSearchByPass(BaseBypass):
             # Enable the domains we need
             tab.Network.enable()
             tab.Page.enable()
+            
+            # Set up a listener for network responses to check status codes.
+            def handle_response_received(**kwargs):
+                response = kwargs.get("response")
+                if response is None:
+                    raise Exception("No response received")
+                status = response.get("status")
+                if status >= 400:
+                    raise Exception(f"HTTP error: {status}")
+
+            tab.Network.responseReceived = handle_response_received
 
             print("Navigating first to a blank page...")
             tab.Page.navigate(url="about:blank")
