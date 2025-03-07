@@ -13,7 +13,8 @@ class GoogleSearchBypass(BaseBypass):
             task_id, 
             headless, 
             user_data_dir=f"sasha_{task_id}", 
-            extension_path="extensions/capsolver"
+            extension_path="extensions/capsolver", 
+            disable_images=False
         )
         self.initialize()
 

@@ -14,7 +14,8 @@ class BaseBypass:
             task_id: str,
             headless: bool = False,
             user_data_dir = "sasha", 
-            extension_path = None
+            extension_path = None, 
+            disable_images: bool = True
         ):
 
         self.proxy_pool = proxy_pool
@@ -23,6 +24,7 @@ class BaseBypass:
         self.headless = headless
         self.user_data_dir = user_data_dir
         self.extension_path = extension_path
+        self.disable_images = disable_images
 
         self.proxy_port = None
         self.chrome_port = None
@@ -67,7 +69,8 @@ class BaseBypass:
             chrome_port=self.chrome_port,
             headless=self.headless,
             user_data_dir=self.user_data_dir,
-            extension_path=self.extension_path
+            extension_path=self.extension_path, 
+            disable_images=self.disable_images
         )
 
     def cleanup(self):

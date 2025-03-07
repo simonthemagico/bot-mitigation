@@ -52,6 +52,7 @@ class ChromeManager:
             chrome_port, 
             extension_path="extensions/capsolver",
             adblock_extension_path="extensions/ublock",
+            disable_images=True,
             user_data_dir=None,
             headless=True, 
             command=None
@@ -71,6 +72,7 @@ class ChromeManager:
         self.headless = headless
         self.chrome_process = None
         self.user_data_dir = user_data_dir
+        self.disable_images = disable_images
 
         # Get bridge root directory (two levels up from chrome_manager.py)
         self.bridge_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -104,17 +106,17 @@ class ChromeManager:
             "--no-first-run",
             "--no-default-browser-check", 
             "--disable-gpu", 
-            "--password-store=basic", 
-
-            # Disable images to save bandwidth
-            "--blink-settings=imagesEnabled=false",
-            "--disable-image-loading",
-            "--disable-images",
-
-            # Existing performance flags
-            "--disable-renderer-accessibility", 
-            "--disable-translate"
+            "--password-store=basic"
         ]
+
+        # Apply image disabling settings if enabled
+        if self.disable_images:
+            self.command.extend([
+                # Disable images to save bandwidth
+                "--blink-settings=imagesEnabled=false",
+                "--disable-image-loading",
+                "--disable-images",
+            ])
 
         # Handle profile directory
         if user_data_dir:
@@ -125,6 +127,16 @@ class ChromeManager:
             self.command.append(f"--user-data-dir={user_data_dir}")
         else:
             self.command.append("--incognito")
+
+        # Add performance flags
+        self.command.extend([
+            "--disable-renderer-accessibility", 
+            "--disable-translate",
+            "--disable-infobars",
+            "--disable-notifications",
+            "--disable-popup-blocking",
+            "--disable-save-password-bubble",
+        ])
 
         # Handle extensions - always resolve relative to bridge root
         extensions = []
