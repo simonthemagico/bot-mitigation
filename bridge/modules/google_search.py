@@ -43,16 +43,42 @@ class GoogleSearchBypass(BaseBypass):
             tab.Page.enable()
 
             captured_headers = {}
+
             def request_intercept(request, **kwargs):
-                """Callback function to capture headers safely."""
-                headers = request.get("headers", {})
-                captured_headers.update(headers)
+
+                request_url = request.get("url", "")
+
+                if request_url == self.url: 
+                    headers = request.get("headers", {})
+                    captured_headers.update(headers)
+
+                    print('Complete Request')
+                    print(json.dumps(request, indent=4))
+
+            def extra_info_intercept(**params):
+
+                headers = params.get("headers", {})
+
+                authority = headers.get(":authority", "")
+                path = headers.get(":path", "")
+                scheme = headers.get(":scheme", "")
+
+                if authority and path and scheme:
+                    full_url = f"{scheme}://{authority}{path}"
+                    print(f"Reconstructed Full URL: {full_url}")
+                
+                if full_url == self.url:  
+                    captured_headers.update(headers)
+                    
+                    print('Complete Params')
+                    print(json.dumps(params, indent=4))
 
             tab.Network.requestWillBeSent = request_intercept
+            tab.Network.requestWillBeSentExtraInfo = extra_info_intercept
 
-            print(f"Navigating to URL: https://api.ipify.org")
-            tab.Page.navigate(url="https://api.ipify.org")
-            time.sleep(5)
+            # print(f"Navigating to URL: https://api.ipify.org")
+            # tab.Page.navigate(url="https://api.ipify.org")
+            # time.sleep(5)
 
             print(f"Navigating to URL: {self.url}")
             tab.Page.navigate(url=self.url)
@@ -108,7 +134,7 @@ class GoogleSearchBypass(BaseBypass):
             print("Cookies Retrieved:", cookie_dict)
 
             # Fetch the headers
-            headers_dict = {k: v for k, v in captured_headers.items() if k.lower() not in ['cookie']}
+            headers_dict = {k: v for k, v in captured_headers.items() if k.lower() not in ['cookie'] and not k.startswith(':')}
 
             # Get the page content
             result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
@@ -123,7 +149,7 @@ class GoogleSearchBypass(BaseBypass):
 
             # Format cookies for curl
             cookies_curl = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
-            headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in captured_headers.items() if k.lower() not in ['cookie']])
+            headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in headers_dict.items()])
             curl_command = f"curl -x {self.proxy_pool} '{self.url}' --cookie '{cookies_curl}' {headers_curl} -o ~/test.html"
 
             print("\nGenerated cURL Command:")
