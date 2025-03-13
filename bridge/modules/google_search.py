@@ -134,7 +134,11 @@ class GoogleSearchBypass(BaseBypass):
             print("Cookies Retrieved:", cookie_dict)
 
             # Fetch the headers
-            headers_dict = {k: v for k, v in captured_headers.items() if k.lower() not in ['cookie'] and not k.startswith(':')}
+            headers_dict = {
+                k: v for k, v in captured_headers.items() 
+                if k.lower() not in ['cookie', 'accept-encoding'] and not k.startswith(':')
+            }
+            headers_dict
 
             # Get the page content
             result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
