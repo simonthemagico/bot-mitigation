@@ -12,8 +12,8 @@ class GoogleSearchBypass(BaseBypass):
             url, 
             task_id, 
             headless, 
-            # user_data_dir=f"sasha_{task_id}",
-            user_data_dir="sasha",
+            user_data_dir=f"sasha_{task_id}",
+            # user_data_dir="sasha",
             extension_path="extensions/capsolver", 
             disable_images=False
         )
@@ -101,16 +101,11 @@ class GoogleSearchBypass(BaseBypass):
                                          document.querySelector('iframe[src*="recaptcha"]') ||
                                          document.querySelector('iframe[src*="captcha"]');
                         
-                        // Check for common captcha text indicators
-                        const captchaText = document.body.innerText.toLowerCase().includes('captcha') ||
-                                           document.body.innerText.toLowerCase().includes('robot check') ||
-                                           document.body.innerText.toLowerCase().includes('security check');
-                        
                         // Check for typical captcha input elements
                         const captchaInput = document.querySelector('input[name*="captcha"]') ||
                                             document.querySelector('img[alt*="captcha"]');
                         
-                        return !!(recaptcha || captchaText || captchaInput);
+                        return !!(recaptcha || captchaInput);
                     })();
                     """
                 )
