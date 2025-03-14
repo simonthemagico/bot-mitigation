@@ -163,8 +163,6 @@ async def execute_bypass_with_timeout(
 
         # Store handler reference for potential cancellation
         task_store[task_id]["handler"] = handler
-
-        # Execute bypass in thread pool with timeout
         loop = asyncio.get_event_loop()
         bypass_task = loop.run_in_executor(None, handler.bypass)
 

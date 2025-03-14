@@ -1,5 +1,6 @@
 import subprocess
 import os
+import signal
 import shutil
 import tempfile
 import platform
@@ -196,7 +197,21 @@ class ChromeManager:
             # 1) Terminate Chrome if running
             if self.chrome_process:
                 self.chrome_process.terminate()
-                self.chrome_process.wait(timeout=5)
+                
+                timeout = 5
+                start_time = time.time()
+
+                while time.time() - start_time < timeout:
+                    if self.chrome_process.poll() is not None:
+                        print(f"Chrome process {self.chrome_process.pid} exited successfully.")
+                        break
+                    time.sleep(0.5)
+                
+                # If Chrome is still running, force kill
+                if self.chrome_process.poll() is None:
+                    print(f"Chrome process {self.chrome_process.pid} did not exit, force killing...")
+                    os.kill(self.chrome_process.pid, signal.SIGKILL)
+                    print(f"Chrome process {self.chrome_process.pid} forcefully terminated.")
 
             # 2) If we used an explicit user_data_dir, remove it
             if self.user_data_dir and os.path.exists(self.user_data_dir):
@@ -205,6 +220,9 @@ class ChromeManager:
 
             # If we used incognito mode, we might not need to do anything
             # because no persistent profile folder was created.
+
+        except ProcessLookupError:
+            print(f"Chrome process {self.chrome_process.pid} already exited.")
 
         except Exception as e:
             print(f"Error during cleanup: {e}")
