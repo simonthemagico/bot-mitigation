@@ -21,6 +21,8 @@ def test_google_bypass():
     try:
         print("\n1. Starting bypass process...")
         content, cookies, curl = bypass.bypass()
+
+        input('mmmm')
         
         print("\n2. Results:")
         print(f"\nCookies received:")

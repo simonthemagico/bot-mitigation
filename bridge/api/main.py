@@ -11,6 +11,7 @@ from asyncio import create_task as create_async_task, TimeoutError
 import asyncio
 import secrets
 import re
+from contextlib import asynccontextmanager
 
 from modules.google_search import GoogleSearchBypass
 from modules.seloger_search import SeLogerSearchBypass
@@ -83,11 +84,19 @@ BYPASS_HANDLERS = {
     BypassMethod.LOUISVUITTON_SEARCH: LouisVuittonSearchByPass
 }
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    asyncio.create_task(cleanup_old_tasks())
+    await asyncio.sleep(1)
+    yield  
+    logger.info("Shutting down cleanup task...") 
+
 # Initialize FastAPI and task store
 app = FastAPI(
     title="bridge.lobstr.io",
     description="JS browser bypass API",
-    version="1.0.0"
+    version="1.0.0", 
+    lifespan=lifespan
 )
 
 # Serve static files for Let's Encrypt (no auth required)
@@ -130,7 +139,8 @@ async def create_task(
     )
     task_store[task_id] = {
         **initial_response.dict(), 
-        "handler": None
+        "handler": None, 
+        "timestamp": time.time()
     }
 
     asyncio.create_task(execute_bypass_with_timeout(task_id, task, TIMEOUT))
@@ -221,6 +231,27 @@ async def execute_bypass_with_timeout(
             "error": str(e)
         })
 
+# Cleanup tasks older than 10 min.
+async def cleanup_old_tasks():
+
+    while True:
+        now = time.time()
+        expired_tasks = [
+            task_id for task_id, task in list(task_store.items())  # Use list() to avoid runtime changes error
+            if task["status"] in [TaskStatus.DONE, TaskStatus.ERROR, TaskStatus.TIMEOUT] 
+            and now - task["timestamp"] > 600  # Remove tasks older than 10 min
+        ]
+        
+        if expired_tasks:
+            logger.info(f"Cleaning up {len(expired_tasks)} expired tasks...")
+
+        for task_id in expired_tasks:
+            try: 
+                task_store.pop(task_id, None)
+            except KeyError: 
+                pass
+
+        await asyncio.sleep(300)
 
 @app.get("/task/{task_id}", response_model=TaskResponse)
 async def get_task(

@@ -27,7 +27,7 @@ class GoogleSearchBypass(BaseBypass):
             print("Starting Chrome Browser...")
             self.chrome.create_chrome()
 
-            time.sleep(5)
+            time.sleep(1)
 
             browser = pychrome.Browser(url=f"http://localhost:{self.chrome_port}")
             print("Connected to Chrome Remote Debugger.")
@@ -36,8 +36,9 @@ class GoogleSearchBypass(BaseBypass):
             print("Browser Version:", version_info['Browser'])
 
             # Tab management
-            tab = browser.list_tab()[0] if browser.list_tab() else browser.new_tab()
+            tab = browser.list_tab(timeout=5)[0] if browser.list_tab(timeout=5) else browser.new_tab()
             tab.start()
+            print("Tab started.")
 
             tab.Network.enable()
             tab.Page.enable()
@@ -53,7 +54,7 @@ class GoogleSearchBypass(BaseBypass):
                     captured_headers.update(headers)
 
                     print('Complete Request')
-                    print(json.dumps(request, indent=4))
+                    # print(json.dumps(request, indent=4))
 
             def extra_info_intercept(**params):
 
@@ -65,13 +66,13 @@ class GoogleSearchBypass(BaseBypass):
 
                 if authority and path and scheme:
                     full_url = f"{scheme}://{authority}{path}"
-                    print(f"Reconstructed Full URL: {full_url}")
+                    # print(f"Reconstructed Full URL: {full_url}")
                 
                 if full_url == self.url:  
                     captured_headers.update(headers)
                     
                     print('Complete Params')
-                    print(json.dumps(params, indent=4))
+                    # print(json.dumps(params, indent=4))
 
             tab.Network.requestWillBeSent = request_intercept
             tab.Network.requestWillBeSentExtraInfo = extra_info_intercept
@@ -81,7 +82,7 @@ class GoogleSearchBypass(BaseBypass):
             # time.sleep(5)
 
             print(f"Navigating to URL: {self.url}")
-            tab.Page.navigate(url=self.url)
+            tab.Page.navigate(url=self.url, _timeout=10)
             
             print('Waiting 5 seconds')
             time.sleep(5)

@@ -74,6 +74,7 @@ class BaseBypass:
         )
 
     def cleanup(self):
+        print(1)
         if self.chrome:
             self.chrome.close_chrome()
         if self.proxy_server:

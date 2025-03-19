@@ -6,6 +6,7 @@ import tempfile
 import platform
 import time
 import pychrome
+import requests
 
 from .proxy_manager import ProxyManager
 
@@ -52,10 +53,11 @@ class ChromeManager:
             proxy_port, 
             chrome_port, 
             extension_path="extensions/capsolver",
-            adblock_extension_path="extensions/ublock",
+            # adblock_extension_path="extensions/ublock",
+            adblock_extension_path=None,
             disable_images=True,
             user_data_dir=None,
-            headless=True, 
+            headless=False, 
             command=None
         ):
         """Initialize Chrome manager
@@ -74,6 +76,9 @@ class ChromeManager:
         self.chrome_process = None
         self.user_data_dir = user_data_dir
         self.disable_images = disable_images
+
+        self.proxy_port = proxy_port
+        self.chrome_port = chrome_port
 
         # Get bridge root directory (two levels up from chrome_manager.py)
         self.bridge_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -107,7 +112,8 @@ class ChromeManager:
             "--no-first-run",
             "--no-default-browser-check", 
             "--disable-gpu", 
-            "--password-store=basic"
+            # "--password-store=basic",
+            # "--new-window"
         ]
 
         # Apply image disabling settings if enabled
@@ -164,6 +170,8 @@ class ChromeManager:
             env = os.environ.copy()
             if not self.headless:
                 env["DISPLAY"] = ":1"
+
+            print("Starting Chrome with command:", " ".join(self.command))  # Debugging line
             
             self.chrome_process = subprocess.Popen(
                 self.command,
@@ -172,9 +180,10 @@ class ChromeManager:
                 stderr=subprocess.PIPE, 
                 text=True
             )
-            print("Chrome started successfully!")
 
-            time.sleep(2)
+            time.sleep(5)
+            
+            print("Chrome started successfully!")
 
             # Check if process is still running
             if self.chrome_process.poll() is not None:
@@ -186,6 +195,18 @@ class ChromeManager:
                 raise Exception("Chrome failed to start")
                 
             print("\nChrome process started with PID:", self.chrome_process.pid)
+            print(f"Expected DevTools URL: http://127.0.0.1:{self.chrome_port}")
+
+            # Check if DevTools API is reachable
+            for attempt in range(5):
+                try:
+                    response = requests.get(f"http://127.0.0.1:{self.chrome_port}/json", timeout=5)
+                    print(f"✅ Chrome DevTools API response (attempt {attempt+1}):", response.json())
+                    break  # Success!
+                except requests.exceptions.RequestException as e:
+                    print(f"❌ DevTools API not responding (attempt {attempt+1}): {e}")
+                    time.sleep(3)  # Wait before retrying
+
 
         except Exception as e:
             print(f"Error during Chrome setup: {e}")
@@ -237,50 +258,70 @@ class ChromeManager:
         ]
 
 def test_chrome():
-    """Run proxy manager"""
+    """Test Chrome manager with proxy"""
     proxy_server = ProxyManager(
         proxy_pool='http://user-sp0e9f6467:08yf0pO2avT_mbiJNp@dc.smartproxy.com:20004',
         proxy_port=8899
     )
     proxy_server.start_proxy_server()
 
-    """Test Chrome manager with proxy"""
     chrome_manager = ChromeManager(
         proxy_port=8899,
         chrome_port=7778,
-        headless=False,
+        headless=False,  # Disable headless for testing
         user_data_dir="sasha"
     )
 
     browser = None
     tab = None
-    
+
     try:
         # Start Chrome
         chrome_manager.create_chrome()
-        time.sleep(2)
         
+        print("\n⏳ Waiting for Chrome DevTools API to be ready...")
+        time.sleep(5)  # Increased wait time
+        
+        print("\n🔍 Checking Chrome DevTools API availability...")
+        for attempt in range(5):
+            try:
+                response = requests.get(f"http://127.0.0.1:7778/json", timeout=5)
+                print(f"✅ DevTools API response (attempt {attempt+1}):", response.json())
+                break  # Success!
+            except requests.exceptions.RequestException as e:
+                print(f"❌ DevTools API not responding (attempt {attempt+1}): {e}")
+                time.sleep(3)  # Wait before retrying
+
         # Connect DevTools
-        browser = pychrome.Browser(url="http://localhost:7778")
-        tab = browser.list_tab()[0] if browser.list_tab() else browser.new_tab()
+        browser = pychrome.Browser(url="http://127.0.0.1:7778")
+        print("📌 Browser connected!")
+
+        tabs = browser.list_tab()
+        if not tabs:
+            print("⚠️ No tabs found! Creating a new one...")
+            tab = browser.new_tab()
+        else:
+            tab = tabs[0]
+
         tab.start()
-        
-        # Enable domains
+        print("🟢 Tab is now active!")
+
+        # Enable Network and Page
         tab.Network.enable()
         tab.Page.enable()
         
         # Test proxy
+        print("🌐 Navigating to IP check...")
         tab.Page.navigate(url="https://api.ipify.org")
         time.sleep(5)
-        
+
         # Get IP
         result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
-        print(f"Proxy IP: {result['result']['value'].strip()}")
-        
+        print(f"🔹 Proxy IP: {result['result']['value'].strip()}")
+
         input("Press Enter to quit...")
-        
+
     finally:
-        # Cleanup
         if tab:
             tab.stop()
         if browser and tab:
