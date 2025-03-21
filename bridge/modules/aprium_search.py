@@ -1,8 +1,23 @@
 import time
-import threading
+import json
+import websocket
 import pychrome
-import os
+from urllib.parse import urlparse, unquote
+from pychrome.tab import Tab
 from .base import BaseBypass
+
+# SILENCE pychrome’s background errors
+_orig_recv = Tab._recv_loop
+
+def _safe_recv_loop(self):
+    try:
+        _orig_recv(self)
+    except (websocket._exceptions.WebSocketConnectionClosedException,
+            json.decoder.JSONDecodeError):
+        return
+
+Tab._recv_loop = _safe_recv_loop
+
 
 class ApriumSearchByPass(BaseBypass):
     def __init__(self, proxy_pool: str, url: str, task_id: str, headless: bool = True):
@@ -12,6 +27,7 @@ class ApriumSearchByPass(BaseBypass):
         self.initialize()
 
     def bypass(self):
+        tab = None
         try:
             print("Starting Proxy Server...")
             self.proxy_server.start_proxy_server()
@@ -22,73 +38,66 @@ class ApriumSearchByPass(BaseBypass):
 
             browser = pychrome.Browser(url=f"http://localhost:{self.chrome_port}")
             print("Connected to Chrome Remote Debugger.")
-            tab = browser.list_tab()[0] if browser.list_tab() else browser.new_tab()
-            tab.start()
 
+            # Create & start fresh tab
+            tab = browser.new_tab()
+            tab.start()
             tab.Network.enable()
             tab.Page.enable()
-            tab.Network.setCacheDisabled(cacheDisabled=True)
 
-            # ─── HEADER CAPTURE SETUP ─────────────────────────────────────────
-            header_event = threading.Event()
-            self.captured_request_headers = {}
-            self.captured_response_headers = {}
+            self.requests = []
+            def capture_request(**kwargs):
+                req = kwargs.get("request")
+                if req:
+                    self.requests.append(req)
+            tab.Network.requestWillBeSent = capture_request
 
-            def on_request(**kwargs):
-                req = kwargs.get("request", {})
-                if req.get("url") == self.url:
-                    self.captured_request_headers.update(req.get("headers", {}))
-                    header_event.set()
+            print("Navigating to about:blank…")
+            tab.Page.navigate(url="about:blank")
+            time.sleep(2)
 
-            def on_response(**kwargs):
-                resp = kwargs.get("response", {})
-                if resp.get("url") == self.url:
-                    self.captured_response_headers.update(resp.get("headers", {}))
-                    status = resp.get("status", 0)
-                    if status >= 400:
-                        raise Exception(f"HTTP error {status} for {self.url}")
-                    header_event.set()
-
-            tab.Network.requestWillBeSent = on_request
-            tab.Network.responseReceived = on_response
-
-            # ─── NAVIGATION ────────────────────────────────────────────────────
-            print(f"Navigating to URL: {self.url}")
+            print(f"Navigating to target URL: {self.url}")
             tab.Page.navigate(url=self.url)
+            time.sleep(5)
 
-            # ─── WAIT FOR HEADER EVENT (10s timeout) ───────────────────────────
-            if not header_event.wait(timeout=10):
-                raise Exception(f"No request or response headers captured for {self.url} within 10 seconds")
-
-            self.captured_headers = {**self.captured_request_headers, **self.captured_response_headers}
-            if not self.captured_headers:
-                raise Exception(f"Captured event but no header data for {self.url}")
-
-            # ─── WAIT FOR PRODUCT-CONTAINER (60s timeout) ──────────────────────
-            print("Waiting for //div[@class='product-container'] …")
-            start = time.time()
-            while time.time() - start < 60:
-                found = tab.Runtime.evaluate(
-                    expression="!!document.evaluate(\"//div[@class='product-container']\", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue"
-                )["result"]["value"]
-                if found:
+            print("Waiting for product-container…")
+            start, timeout = time.time(), 60
+            xpath = (
+                "document.evaluate(\"//div[@class='product-container']\"," +
+                " document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue != null"
+            )
+            while time.time() - start < timeout:
+                if tab.Runtime.evaluate(expression=xpath)["result"]["value"]:
+                    print("✅ Element found!")
                     break
                 time.sleep(1)
             else:
                 raise Exception("Timeout waiting for product-container")
 
+            # Pick last request matching domain+path (decoded)
+            parsed_target = urlparse(self.url)
+            target_netloc = parsed_target.netloc
+            target_path = unquote(parsed_target.path)
+
+            matches = []
+            for req in self.requests:
+                parsed = urlparse(req.get("url", ""))
+                if parsed.netloc == target_netloc and unquote(parsed.path) == target_path:
+                    matches.append(req)
+
+            if not matches:
+                raise Exception("No matching request captured")
+
+            last_req = matches[-1]
+            self.captured_headers = last_req.get("headers", {})
+
             content = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")["result"]["value"]
-            print(f"Page content retrieved (length: {len(content)})")
-
             filepath = self.save_page_content(content=content, prefix="bypass")
-            print("Saved page content to:", filepath)
+            raw_cookies = tab.Network.getCookies()['cookies']
+            cookies = {c['name']: c['value'] for c in raw_cookies}
 
-            cookies = {c["name"]: c["value"] for c in tab.Network.getCookies()["cookies"]}
-            print("Cookies retrieved:", bool(cookies))
-
-            # ─── BUILD cURL COMMAND ────────────────────────────────────────────
-            headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in self.captured_headers.items()])
-            cookies_curl = "; ".join([f"{k}={v}" for k, v in cookies.items()])
+            headers_curl = " ".join(f"-H '{k}: {v}'" for k, v in self.captured_headers.items())
+            cookies_curl = "; ".join(f"{k}={v}" for k, v in cookies.items())
             curl = (
                 f"curl -x {self.proxy_pool} '{self.url}' --cookie '{cookies_curl}' "
                 f"{headers_curl} --compressed -o ~/louisvuitton_test.html"
@@ -102,5 +111,11 @@ class ApriumSearchByPass(BaseBypass):
             raise
 
         finally:
-            print("Cleaning up...")
+            print("Cleaning up…")
+            if tab:
+                try:
+                    tab.stop()
+                    browser.close_tab(tab)
+                except Exception:
+                    pass
             self.cleanup()

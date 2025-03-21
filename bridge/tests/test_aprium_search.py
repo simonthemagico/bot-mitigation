@@ -11,7 +11,7 @@ def test_aprium_bypass():
 
     bypass = ApriumSearchByPass(
         proxy_pool="http://brd-customer-hl_f9eb8d89-zone-leboncoinnew20000-ip-213.159.12.120:bc37zhm96zj1@brd.superproxy.io:33335",
-        url="https://notre-dame.pharmacie-monge.fr/recherche?categorie=Beaut%C3%A9|Corps|Soins%20hydratants",
+        url="https://notre-dame.pharmacie-monge.fr/recherche?categorie=Beauté|Corps|Soins%20hydratants",
         task_id="tk_test123",
         headless=False
     )
