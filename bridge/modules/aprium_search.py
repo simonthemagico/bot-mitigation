@@ -89,6 +89,8 @@ class ApriumSearchByPass(BaseBypass):
                 raise Exception("No matching request captured")
 
             last_req = matches[-1]
+            if last_req.get("url", "").rstrip("/").endswith("/404"):
+                raise Exception("404 page")
             self.captured_headers = last_req.get("headers", {})
 
             content = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")["result"]["value"]
