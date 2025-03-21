@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 from modules.google_search import GoogleSearchBypass
 from modules.seloger_search import SeLogerSearchBypass
 from modules.louisvuitton_search import LouisVuittonSearchByPass
+from modules.aprium_search import ApriumSearchByPass
 
 VALID_TOKENS = {
     "77f6bc041b99accf93093ebdc67a45ef472a4496"
@@ -53,6 +54,7 @@ class BypassMethod(str, Enum):
     GOOGLE_SEARCH = "google_search"
     SELOGER_SEARCH = "seloger_search"
     LOUISVUITTON_SEARCH = "louisvuitton_search"
+    APRIUM_SEARCH = "aprium_search"
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
@@ -81,7 +83,8 @@ class TaskResponse(BaseModel):
 BYPASS_HANDLERS = {
     BypassMethod.GOOGLE_SEARCH: GoogleSearchBypass,
     BypassMethod.SELOGER_SEARCH: SeLogerSearchBypass,
-    BypassMethod.LOUISVUITTON_SEARCH: LouisVuittonSearchByPass
+    BypassMethod.LOUISVUITTON_SEARCH: LouisVuittonSearchByPass,
+    BypassMethod.APRIUM_SEARCH: ApriumSearchByPass
 }
 
 @asynccontextmanager
