@@ -14,7 +14,7 @@ def main():
         "~/Library/Application Support/Google/Chrome"
     )
 
-    print(f"Scanning for 'sasha_' profiles older than 3 days in {chrome_profiles_dir}...")
+    print(f"Scanning for 'sasha_' or 'andrew_' profiles older than 3 days in {chrome_profiles_dir}...")
 
     if not os.path.isdir(chrome_profiles_dir):
         print("Chrome directory not found, nothing to do.")
@@ -22,7 +22,7 @@ def main():
 
     for name in os.listdir(chrome_profiles_dir):
         # We're looking for folder names starting with "sasha_"
-        if not name.startswith("sasha_"):
+        if not name.startswith("sasha_") and not name.startswith("andrew_"):
             continue
 
         full_path = os.path.join(chrome_profiles_dir, name)
