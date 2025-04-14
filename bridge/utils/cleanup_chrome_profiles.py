@@ -4,34 +4,43 @@ import os
 import time
 import shutil
 
+PROFILE_PREFIXES = ("sasha_", "andrew_")
+AGE_THRESHOLD_DAYS = 2
+
+def remove_if_old(path: str, cutoff: float):
+    if not os.path.isdir(path):
+        return False
+
+    mtime = os.path.getmtime(path)
+    if mtime < cutoff:
+        print(f"Removing: {path}")
+        shutil.rmtree(path, ignore_errors=True)
+        return True
+    return False
+
 def main():
-    # Time threshold (3 days ago, in seconds)
     now = time.time()
-    three_days_ago = now - (3 * 24 * 60 * 60)
+    cutoff = now - (AGE_THRESHOLD_DAYS * 24 * 60 * 60)
 
-    # This is where Chrome profiles typically are on macOS
-    chrome_profiles_dir = os.path.expanduser(
-        "~/Library/Application Support/Google/Chrome"
-    )
+    profiles_base = "/System/Volumes/Data/Users/administrator/Library/Application Support/Google/Chrome"
+    caches_base = "/System/Volumes/Data/Users/administrator/Library/Caches/Google/Chrome"
 
-    print(f"Scanning for 'sasha_' or 'andrew_' profiles older than 3 days in {chrome_profiles_dir}...")
+    print(f"Scanning for Chrome profiles older than {AGE_THRESHOLD_DAYS} days...")
 
-    if not os.path.isdir(chrome_profiles_dir):
-        print("Chrome directory not found, nothing to do.")
+    if not os.path.isdir(profiles_base):
+        print("Chrome profiles directory not found.")
         return
 
-    for name in os.listdir(chrome_profiles_dir):
-        # We're looking for folder names starting with "sasha_"
-        if not name.startswith("sasha_") and not name.startswith("andrew_"):
+    for name in os.listdir(profiles_base):
+        if not name.startswith(PROFILE_PREFIXES):
             continue
 
-        full_path = os.path.join(chrome_profiles_dir, name)
-        if os.path.isdir(full_path):
-            # Check last modification time
-            mtime = os.path.getmtime(full_path)
-            if mtime < three_days_ago:
-                print(f"Removing old ephemeral profile: {full_path}")
-                shutil.rmtree(full_path, ignore_errors=True)
+        profile_path = os.path.join(profiles_base, name)
+        cache_path = os.path.join(caches_base, name)
+
+        removed_profile = remove_if_old(profile_path, cutoff)
+        if removed_profile:
+            remove_if_old(cache_path, cutoff)
 
 if __name__ == "__main__":
     main()
