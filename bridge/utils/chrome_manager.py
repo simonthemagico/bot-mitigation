@@ -58,6 +58,7 @@ class ChromeManager:
             disable_images=True,
             user_data_dir=None,
             headless=False, 
+            disable_http2=False,
             command=None
         ):
         """Initialize Chrome manager
@@ -76,6 +77,7 @@ class ChromeManager:
         self.chrome_process = None
         self.user_data_dir = user_data_dir
         self.disable_images = disable_images
+        self.disable_http2 = disable_http2
 
         self.proxy_port = proxy_port
         self.chrome_port = chrome_port
@@ -163,6 +165,9 @@ class ChromeManager:
 
         if self.headless:
             self.command.append("--headless")
+
+        if self.disable_http2: 
+            self.command.append("--disable-http2")
 
     def create_chrome(self):
         """Start Chrome process"""
