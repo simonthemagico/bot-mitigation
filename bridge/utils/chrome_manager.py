@@ -115,7 +115,7 @@ class ChromeManager:
             "--no-default-browser-check", 
             "--disable-gpu", 
             # "--password-store=basic",
-            # "--new-window"
+            # "--new-window",
         ]
 
         # Apply image disabling settings if enabled
@@ -145,6 +145,13 @@ class ChromeManager:
             "--disable-notifications",
             "--disable-popup-blocking",
             "--disable-save-password-bubble",
+            
+            # NEW: Prevent massive cache writes
+            "--disk-cache-size=10485760",         # 10 MB
+            "--media-cache-size=1048576",         # 1 MB
+            "--disable-application-cache",
+            "--disable-cache",
+            "--disable-dev-shm-usage"
         ])
 
         # Handle extensions - always resolve relative to bridge root

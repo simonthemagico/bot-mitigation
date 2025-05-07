@@ -2,36 +2,139 @@
 
 import os
 import time
+import shutil
 
-def main():
-    # Calculate the time cutoff (3 days ago)
+PROFILE_PREFIXES = ("sasha_", "andrew_")
+PROFILE_AGE_DAYS = 2
+LOG_AGE_DAYS = 3
+
+freed_bytes = 0  # Track total space freed
+
+def get_size(path):
+    """Get total size of a file or directory in bytes."""
+    total = 0
+    if os.path.isfile(path):
+        return os.path.getsize(path)
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            try:
+                fp = os.path.join(dirpath, f)
+                total += os.path.getsize(fp)
+            except FileNotFoundError:
+                continue
+    return total
+
+def remove_if_old(path: str, cutoff: float) -> bool:
+    """Delete directory if it's older than cutoff."""
+    global freed_bytes
+    if not os.path.isdir(path):
+        return False
+    try:
+        mtime = os.path.getmtime(path)
+        if mtime < cutoff:
+            size = get_size(path)
+            print(f"🗑️ Removing directory: {path} ({size / 1e9:.2f} GB)")
+            shutil.rmtree(path, ignore_errors=True)
+            freed_bytes += size
+            return True
+    except Exception as e:
+        print(f"⚠️ Failed to check/remove {path}: {e}")
+    return False
+
+def remove_all_cache(cache_base):
+    """Aggressively remove all Chrome cache folders to reclaim space."""
+    global freed_bytes
+    print(f"🧹 Force-clearing Chrome cache folders in {cache_base}...")
+    if not os.path.isdir(cache_base):
+        return
+    for name in os.listdir(cache_base):
+        path = os.path.join(cache_base, name)
+        if os.path.isdir(path):
+            try:
+                size = get_size(path)
+                shutil.rmtree(path, ignore_errors=True)
+                freed_bytes += size
+                print(f"   🔥 Removed {path} ({size / 1e9:.2f} GB)")
+            except Exception as e:
+                print(f"⚠️ Failed to remove cache {path}: {e}")
+
+def cleanup_chrome_profiles():
     now = time.time()
-    three_days_ago = now - (3 * 24 * 60 * 60)  # 3 days in seconds
+    cutoff = now - (PROFILE_AGE_DAYS * 86400)
 
-    # Get the absolute path to the logs directory
-    # e.g. relative to this script's directory: ../logs
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    logs_dir = os.path.join(script_dir, "..", "logs")
-    logs_dir = os.path.abspath(logs_dir)
+    profiles_base = os.path.expanduser("~/Library/Application Support/Google/Chrome")
+    caches_base = os.path.expanduser("~/Library/Caches/Google/Chrome")
 
-    if not os.path.exists(logs_dir):
-        print(f"Logs directory does not exist: {logs_dir}")
+    print(f"🔍 Looking for Chrome profiles older than {PROFILE_AGE_DAYS} days...")
+
+    if not os.path.isdir(profiles_base):
+        print(f"⚠️ Chrome profile base directory not found: {profiles_base}")
         return
 
-    print(f"Cleaning up logs older than 3 days in: {logs_dir}")
+    for name in os.listdir(profiles_base):
+        if not name.startswith(PROFILE_PREFIXES):
+            continue
 
-    # Loop through log files
+        profile_path = os.path.join(profiles_base, name)
+        cache_path = os.path.join(caches_base, name)
+
+        removed = remove_if_old(profile_path, cutoff)
+        if removed:
+            remove_if_old(cache_path, cutoff)
+
+    # Clear remaining cache folders
+    remove_all_cache(caches_base)
+
+def cleanup_code_sign_clones():
+    print("🔍 Scanning for Chrome code_sign_clone junk...")
+    base = "/private/var/folders"
+    for root, dirs, files in os.walk(base):
+        for d in dirs:
+            if d == "com.google.Chrome.code_sign_clone":
+                full_path = os.path.join(root, d)
+                try:
+                    size = get_size(full_path)
+                    print(f"🗑️ Removing clone: {full_path} ({size / 1e9:.2f} GB)")
+                    shutil.rmtree(full_path, ignore_errors=True)
+                    global freed_bytes
+                    freed_bytes += size
+                except Exception as e:
+                    print(f"⚠️ Failed to remove {full_path}: {e}")
+
+def cleanup_logs():
+    now = time.time()
+    cutoff = now - (LOG_AGE_DAYS * 86400)
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logs_dir = os.path.abspath(os.path.join(script_dir, "..", "logs"))
+
+    print(f"🔍 Looking for logs older than {LOG_AGE_DAYS} days in {logs_dir}")
+
+    if not os.path.isdir(logs_dir):
+        print(f"⚠️ Logs directory not found: {logs_dir}")
+        return
+
     for filename in os.listdir(logs_dir):
         file_path = os.path.join(logs_dir, filename)
-
-        # If it's a file (not a directory)
         if os.path.isfile(file_path):
-            # Check last modification time
-            file_mtime = os.path.getmtime(file_path)
-            if file_mtime < three_days_ago:
-                # Delete it
-                print(f"Removing old log file: {filename}")
-                os.remove(file_path)
+            try:
+                mtime = os.path.getmtime(file_path)
+                if mtime < cutoff:
+                    size = os.path.getsize(file_path)
+                    print(f"🗑️ Removing log file: {file_path} ({size / 1e6:.2f} MB)")
+                    os.remove(file_path)
+                    global freed_bytes
+                    freed_bytes += size
+            except Exception as e:
+                print(f"⚠️ Failed to check/remove log file {file_path}: {e}")
+
+def main():
+    print("🚀 === START CLEANUP ===")
+    cleanup_chrome_profiles()
+    cleanup_code_sign_clones()
+    cleanup_logs()
+    print(f"✅ Total space freed: {freed_bytes / 1e9:.2f} GB")
+    print("✅ === DONE ===")
 
 if __name__ == "__main__":
     main()
