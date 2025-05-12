@@ -21,7 +21,7 @@ module.exports = {
         interpreter: null,                    // 'null' means use 'script' directly; 
                                              // or keep 'python3' for 'interpreter'
         // Run once a day at 2:00 AM
-        cron_restart: "0 2 * * *",
+        cron_restart: "0 * * * *",
         autorestart: false,                   // Don't keep it running continuously
         watch: false
       }
