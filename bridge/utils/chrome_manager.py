@@ -114,7 +114,7 @@ class ChromeManager:
             "--no-first-run",
             "--no-default-browser-check", 
             "--disable-gpu", 
-            # "--password-store=basic",
+            "--password-store=basic",
             # "--new-window",
         ]
 
