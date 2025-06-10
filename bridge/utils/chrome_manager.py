@@ -59,7 +59,6 @@ class ChromeManager:
             user_data_dir=None,
             headless=False, 
             disable_http2=False,
-            use_proxy=True,
             command=None
         ):
         """Initialize Chrome manager
@@ -79,7 +78,6 @@ class ChromeManager:
         self.user_data_dir = user_data_dir
         self.disable_images = disable_images
         self.disable_http2 = disable_http2
-        self.use_proxy = use_proxy
 
         self.proxy_port = proxy_port
         self.chrome_port = chrome_port
@@ -120,10 +118,8 @@ class ChromeManager:
             # "--new-window",
         ]
 
-        if self.use_proxy: 
-            self.command.append(f"--proxy-server=127.0.0.1:{proxy_port}")
-        else: 
-            self.command.append("--no-proxy-server")
+        # Set proxy
+        self.command.append(f"--proxy-server=127.0.0.1:{proxy_port}")
 
         # Apply image disabling settings if enabled
         if self.disable_images:
@@ -289,8 +285,7 @@ def test_chrome():
         proxy_port=8899,
         chrome_port=7778,
         headless=False,  # Disable headless for testing
-        user_data_dir="sasha", 
-        use_proxy=False
+        user_data_dir="sasha"
     )
 
     browser = None

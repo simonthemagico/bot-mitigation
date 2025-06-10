@@ -6,7 +6,7 @@ import json
 import os
 
 class GoogleSearchBypass(BaseBypass):
-    def __init__(self, proxy_pool: str, url: str, task_id: str, headless: bool = True, use_proxy: bool = True):
+    def __init__(self, proxy_pool: str, url: str, task_id: str, headless: bool = True):
         super().__init__(
             proxy_pool, 
             url, 
@@ -14,8 +14,7 @@ class GoogleSearchBypass(BaseBypass):
             headless, 
             user_data_dir=f"sasha_{task_id}",
             extension_path="extensions/capsolver", 
-            disable_images=False, 
-            use_proxy=use_proxy
+            disable_images=False
         )
         self.initialize()
 
