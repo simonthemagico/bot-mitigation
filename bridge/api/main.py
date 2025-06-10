@@ -69,6 +69,7 @@ class TaskRequest(BaseModel):
     proxy_pool: str  # Format: "http://user:pass@host:port"
     bypass_method: BypassMethod = BypassMethod.GOOGLE_SEARCH  # Default to Google Search
     headless: Optional[bool] = True
+    use_proxy: Optional[bool] = True
 
 class TaskResponse(BaseModel):
     id: str
@@ -171,7 +172,8 @@ async def execute_bypass_with_timeout(
             proxy_pool=task.proxy_pool,
             url=task.url,
             task_id=task_id,
-            headless=task.headless
+            headless=task.headless, 
+            use_proxy=task.use_proxy
         )
 
         # Store handler reference for potential cancellation

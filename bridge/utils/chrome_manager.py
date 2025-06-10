@@ -59,6 +59,7 @@ class ChromeManager:
             user_data_dir=None,
             headless=False, 
             disable_http2=False,
+            use_proxy=True,
             command=None
         ):
         """Initialize Chrome manager
@@ -78,6 +79,7 @@ class ChromeManager:
         self.user_data_dir = user_data_dir
         self.disable_images = disable_images
         self.disable_http2 = disable_http2
+        self.use_proxy = use_proxy
 
         self.proxy_port = proxy_port
         self.chrome_port = chrome_port
@@ -110,13 +112,18 @@ class ChromeManager:
         self.command = [
             chrome_path,
             f"--remote-debugging-port={chrome_port}",
-            f"--proxy-server=127.0.0.1:{proxy_port}",
+            # f"--proxy-server=127.0.0.1:{proxy_port}",
             "--no-first-run",
             "--no-default-browser-check", 
             "--disable-gpu", 
             "--password-store=basic",
             # "--new-window",
         ]
+
+        if self.use_proxy: 
+            self.command.append(f"--proxy-server=127.0.0.1:{proxy_port}")
+        else: 
+            self.command.append("--no-proxy-server")
 
         # Apply image disabling settings if enabled
         if self.disable_images:
@@ -169,6 +176,7 @@ class ChromeManager:
                     raise FileNotFoundError(f"Extension not found: {path}")
         if extensions:
             self.command.append(f"--load-extension={','.join(extensions)}")
+            self.command.append(f"--disable-extensions-except={','.join(extensions)}")
 
         if self.headless:
             self.command.append("--headless")
@@ -281,7 +289,8 @@ def test_chrome():
         proxy_port=8899,
         chrome_port=7778,
         headless=False,  # Disable headless for testing
-        user_data_dir="sasha"
+        user_data_dir="sasha", 
+        use_proxy=False
     )
 
     browser = None
@@ -326,6 +335,11 @@ def test_chrome():
         print("🌐 Navigating to IP check...")
         tab.Page.navigate(url="https://api.ipify.org")
         time.sleep(5)
+
+        # Test extension
+        # print("🌐 Navigating to Google reCAPTCHA demo page...")
+        # tab.Page.navigate(url="https://www.google.com/recaptcha/api2/demo")
+        # time.sleep(8)
 
         # Get IP
         result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")

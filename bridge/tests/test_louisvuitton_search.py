@@ -3,15 +3,16 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from modules.louisvuitton_search import LouisVuittonSearchByPass
-import time
 
 def test_louisvuitton_bypass():
     print("=== Testing Louis Vuitton Akami Bypass ===")
 
     bypass = LouisVuittonSearchByPass(
-        proxy_pool="http://sp0e9f6467:EWXv1a50bXfxc3vnsw@fr.smartproxy.com:41469",
+        proxy_pool="brd-customer-hl_f9eb8d89-zone-leboncoinnew20000:bc37zhm96zj1@brd.superproxy.io:33335",
+        # proxy_pool="sp0e9f6467:EWXv1a50bXfxc3vnsw@fr.smartproxy.com:40001",  # residential_smartproxy
+        # proxy_pool="spdicbst2v:h5b4tPbwbg4Nx8ZleU@fr.smartproxy.com:40001",  # mobile_smartproxy
         url="https://fr.louisvuitton.com/fra-fr/homme/portefeuilles-et-petite-maroquinerie/tous-les-portefeuilles-et-petite-maroquinerie/_/N-t1iazbp7",
-        task_id="tk_test123",
+        task_id="tk_test_new",
         headless=False
     )
 

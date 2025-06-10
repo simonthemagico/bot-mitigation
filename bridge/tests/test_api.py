@@ -23,7 +23,8 @@ def test_flow():
         "url": "https://www.google.com/search?q=crabcrab",
         "proxy_pool": "http://user-sp0e9f6467:08yf0pO2avT_mbiJNp@dc.smartproxy.com:20004",
         "bypass_method": "google_search",
-        "headless": False  # Set to False to see the browser
+        "headless": False,  # Set to False to see the browser
+        "use_proxy": False
     }
 
     response = requests.post(

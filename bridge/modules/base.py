@@ -16,7 +16,8 @@ class BaseBypass:
             user_data_dir = "sasha", 
             extension_path = None, 
             disable_images: bool = True, 
-            disable_http2 : bool = False
+            disable_http2 : bool = False, 
+            use_proxy : bool = False
         ):
 
         self.proxy_pool = proxy_pool
@@ -27,6 +28,7 @@ class BaseBypass:
         self.extension_path = extension_path
         self.disable_images = disable_images
         self.disable_http2 = disable_http2
+        self.use_proxy = use_proxy
 
         self.proxy_port = None
         self.chrome_port = None
@@ -73,7 +75,8 @@ class BaseBypass:
             user_data_dir=self.user_data_dir,
             extension_path=self.extension_path, 
             disable_images=self.disable_images, 
-            disable_http2=self.disable_http2
+            disable_http2=self.disable_http2, 
+            use_proxy=self.use_proxy
         )
 
     def cleanup(self):
