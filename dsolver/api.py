@@ -16,7 +16,7 @@ tasks: Dict[str, Dict[str, Any]] = {}
 task_cleaner = TaskCleaner(tasks)
 task_cleaner.start()
 
-os.system(f'"{CHROME_PATH}" --remote-debugging-port={CHROME_PORT} --load-extension={previous_dir}/extensionv2 --user-data-dir={previous_dir}/user-data-dir &')
+os.system(f'"{CHROME_PATH}" --remote-debugging-port={CHROME_PORT} --load-extension={previous_dir}/extensionv2 --disable-extensions-except={previous_dir}/extensionv2 --user-data-dir={previous_dir}/user-data-dir &')
 app = FastAPI()
 
 @app.get('/render')

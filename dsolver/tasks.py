@@ -71,6 +71,7 @@ def process_url(proxy: str, task: Dict):
             CHROME_PATH,
             f'--remote-debugging-port={port}',
             f'--load-extension={previous_dir}/extensionv2',
+            f'--disable-extensions-except={previous_dir}/extensionv2',
             f'--user-data-dir={tmpdirname}',
             f'--proxy-server=http://127.0.0.1:{proxy_port}',
             '--no-first-run',
