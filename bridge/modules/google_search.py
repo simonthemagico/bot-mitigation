@@ -1,11 +1,46 @@
 from .base import BaseBypass
 
-import time
+import time, os, base64, tempfile, json, requests
+from pathlib import Path
+from openai import OpenAI
 import pychrome
 import json
 import os
+import base64
+
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_KEY: 
+    raise RuntimeError(
+        "OPENAI_API_KEY manquante : exporte-la ou passe-la en dur.\n"
+        "ex.  export OPENAI_API_KEY='sk-…'"
+    )
+
+client_ocr = OpenAI(api_key=OPENAI_KEY)
+
+
+def ocr_json_bytes(img_bytes: bytes, model: str = "gpt-4o-mini") -> str:
+    """OCR via OpenAI Vision → renvoie le texte."""
+    b64 = base64.b64encode(img_bytes).decode()
+    r = client_ocr.chat.completions.create(
+        model=model,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "text",
+                 "text": "Lis exactement le texte de l'image et réponds uniquement "
+                         "par un JSON {\"value\":\"<texte>\"}"},
+                {"type": "image_url",
+                 "image_url": {"url": f"data:image/png;base64,{b64}"}}
+            ]
+        }],
+        response_format={"type": "json_object"},
+        max_tokens=16,
+    )
+    return json.loads(r.choices[0].message.content)["value"]
+
 
 class GoogleSearchBypass(BaseBypass):
+
     def __init__(self, proxy_pool: str, url: str, task_id: str, headless: bool = True):
         super().__init__(
             proxy_pool, 
@@ -17,6 +52,16 @@ class GoogleSearchBypass(BaseBypass):
             disable_images=False
         )
         self.initialize()
+
+    JS_DETECT = """
+        (function(){
+            if (document.querySelector('.g-recaptcha, iframe[src*="recaptcha"]'))
+                return 'recaptcha';
+            if (document.querySelector('img[src*="/sorry/image"]'))
+                return 'image';
+            return 'none';
+        })();
+    """
 
     def bypass(self):
         try:
@@ -88,36 +133,50 @@ class GoogleSearchBypass(BaseBypass):
 
             # Check for captcha presence on the page
             print('Checking for captcha...')
-            captcha_check_start = time.time()
-            captcha_timeout = 100  # 100 seconds timeout
+            start = time.time()
+            captcha_timeout = 180
             
-            while time.time() - captcha_check_start < captcha_timeout:
-                # Execute JavaScript to check for common captcha elements - simplified to return true/false
-                result = tab.Runtime.evaluate(
-                    expression="""
-                    (function() {
-                        // Check for Google reCAPTCHA
-                        const recaptcha = document.querySelector('.g-recaptcha') || 
-                                         document.querySelector('iframe[src*="recaptcha"]') ||
-                                         document.querySelector('iframe[src*="captcha"]');
-                        
-                        // Check for typical captcha input elements
-                        const captchaInput = document.querySelector('input[name*="captcha"]') ||
-                                            document.querySelector('img[alt*="captcha"]');
-                        
-                        return !!(recaptcha || captchaInput);
-                    })();
-                    """
-                )
+            while True: 
+                time.sleep(3)
+                ctype = tab.Runtime.evaluate(expression=self.JS_DETECT)["result"]["value"]
                 
-                has_captcha = result.get("result", {}).get("value", False)
-                
-                if has_captcha:
-                    print("Captcha detected! Waiting...")
-                    time.sleep(1)  # Check again in 1 second
-                else:
-                    print("No captcha detected, proceeding.")
+                if ctype == "none":
+                    print("✔️  No captcha → going on")
                     break
+
+                if ctype == "recaptcha":
+                    print("⏳ reCAPTCHA identified, wait for Capsolver extension")
+                    if time.time() - start > captcha_timeout:
+                        raise RuntimeError("reCAPTCHATimeOutError")
+                    time.sleep(1)
+                    continue
+
+                if ctype == "image":
+                    print("🖼️  Captcha image identified, OpenAI resolution...")
+                    img_b64 = tab.Runtime.evaluate(expression="""
+                        (function () {
+                            const img = document.querySelector('img[src*="/sorry/image"]');
+                            if (!img) return null;
+                            const c = document.createElement('canvas');
+                            c.width = img.naturalWidth; c.height = img.naturalHeight;
+                            c.getContext('2d').drawImage(img, 0, 0);
+                            return c.toDataURL('image/png').split(',')[1];
+                        })();
+                    """)["result"]["value"]
+                    
+                    if not img_b64:
+                        raise RuntimeError("Not possible to capture captcha image")
+                
+                    img_bytes = base64.b64decode(img_b64)
+                    code = ocr_json_bytes(img_bytes)
+                    print(f"OCR → {code}")
+
+                    tab.Runtime.evaluate(expression=f"""
+                        document.querySelector('input[name="captcha"]').value = "{code}";
+                        document.getElementById('captcha-form').submit();
+                    """)
+                    time.sleep(3)
+                    continue
             
             print('Waiting done')
             # Waiting after Captcha solved
