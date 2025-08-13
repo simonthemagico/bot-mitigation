@@ -26,13 +26,62 @@ class YelpSearchBypass(BaseBypass):
             time.sleep(1)
 
             browser = pychrome.Browser(url=f"http://localhost:{self.chrome_port}")
-            tab = browser.new_tab()
+            print("Connected to Chrome Remote Debugger.")
+
+            version_info = browser.version()
+            print("Browser Version:", version_info['Browser'])
+
+            # Tab management
+            tab = browser.list_tab(timeout=5)[0] if browser.list_tab(timeout=5) else browser.new_tab()
             tab.start()
+            print("Tab started.")
+
             tab.Network.enable()
             tab.Page.enable()
 
+            captured_headers = {}
+
+            def request_intercept(request, **kwargs):
+
+                request_url = request.get("url", "")
+
+                if request_url == self.url: 
+                    headers = request.get("headers", {})
+                    captured_headers.update(headers)
+
+                    print('Complete Request')
+                    # print(json.dumps(request, indent=4))
+
+            def extra_info_intercept(**params):
+
+                headers = params.get("headers", {})
+
+                authority = headers.get(":authority", "")
+                path = headers.get(":path", "")
+                scheme = headers.get(":scheme", "")
+
+                if authority and path and scheme:
+                    full_url = f"{scheme}://{authority}{path}"
+                    # print(f"Reconstructed Full URL: {full_url}")
+                
+                if full_url == self.url:  
+                    captured_headers.update(headers)
+                    
+                    print('Complete Params')
+                    # print(json.dumps(params, indent=4))
+
+            tab.Network.requestWillBeSent = request_intercept
+            tab.Network.requestWillBeSentExtraInfo = extra_info_intercept
+
+            # print(f"Navigating to URL: https://api.ipify.org")
+            # tab.Page.navigate(url="https://api.ipify.org")
+            # time.sleep(5)
+
             print(f"Navigating to URL: {self.url}")
-            tab.Page.navigate(url=self.url)
+            tab.Page.navigate(url=self.url, _timeout=10)
+            
+            print('Waiting 5 seconds')
+            time.sleep(5)
             
             # Attente + détection DataDome
             time.sleep(3)
