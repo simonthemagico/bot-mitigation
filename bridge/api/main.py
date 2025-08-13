@@ -17,6 +17,7 @@ from modules.google_search import GoogleSearchBypass
 from modules.seloger_search import SeLogerSearchBypass
 from modules.louisvuitton_search import LouisVuittonSearchByPass
 from modules.aprium_search import ApriumSearchByPass
+from modules.yelp_search import YelpSearchBypass
 
 VALID_TOKENS = {
     "77f6bc041b99accf93093ebdc67a45ef472a4496"
@@ -55,6 +56,7 @@ class BypassMethod(str, Enum):
     SELOGER_SEARCH = "seloger_search"
     LOUISVUITTON_SEARCH = "louisvuitton_search"
     APRIUM_SEARCH = "aprium_search"
+    YELP_SEARCH = "yelp_search"
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
@@ -84,7 +86,8 @@ BYPASS_HANDLERS = {
     BypassMethod.GOOGLE_SEARCH: GoogleSearchBypass,
     BypassMethod.SELOGER_SEARCH: SeLogerSearchBypass,
     BypassMethod.LOUISVUITTON_SEARCH: LouisVuittonSearchByPass,
-    BypassMethod.APRIUM_SEARCH: ApriumSearchByPass
+    BypassMethod.APRIUM_SEARCH: ApriumSearchByPass, 
+    BypassMethod.YELP_SEARCH: YelpSearchBypass,
 }
 
 @asynccontextmanager
