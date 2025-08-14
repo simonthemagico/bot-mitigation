@@ -14,7 +14,7 @@ def test_yelp_bypass():
     
     bypass = YelpSearchBypass(
         proxy_pool="http://sp0e9f6467:EWXv1a50bXfxc3vnsw@us.decodo.com:10001",  # residential proxy
-        url='https://www.yelp.com/',
+        url='https://www.yelp.com/search?find_desc=Corporate+Event+Planners&find_loc=San+Mateo%2C+CA',
         task_id=task_id,
         headless=False 
     )
