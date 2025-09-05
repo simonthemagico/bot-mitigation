@@ -11,6 +11,7 @@ from port_lock import acquire_port, release_port
 
 def handle_captcha(url: str, cid: str, port: int, task: Dict):
     task_id = task['task_id']
+    tab = None
     try:
         print(f"Starting captcha handling for URL: {url}")
         tab, browser = create_browser_tab(url, cid, port)
@@ -35,9 +36,10 @@ def handle_captcha(url: str, cid: str, port: int, task: Dict):
         raise e
     finally:
         # Clean up browser resources
-        print("Cleaning up browser tab")
-        tab.stop()
-        browser.close_tab(tab)
+        if tab:
+            print("Cleaning up browser tab")
+            tab.stop()
+            browser.close_tab(tab)
 
 def process_url(proxy: str, task: Dict):
     cid = task['cid']

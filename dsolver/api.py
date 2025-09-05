@@ -16,7 +16,10 @@ tasks: Dict[str, Dict[str, Any]] = {}
 task_cleaner = TaskCleaner(tasks)
 task_cleaner.start()
 
-os.system(f'"{CHROME_PATH}" --remote-debugging-port={CHROME_PORT} --load-extension={previous_dir}/extensionv2 --disable-extensions-except={previous_dir}/extensionv2 --user-data-dir={previous_dir}/user-data-dir &')
+user_data_dir = '/Users/Administrator/Library/Application Support/Google/Chrome-bot'
+
+command = f'"{CHROME_PATH}" --remote-debugging-port={CHROME_PORT} --load-extension={previous_dir}/extensionv2 --disable-extensions-except={previous_dir}/extensionv2 --user-data-dir="{user_data_dir}" --no-first-run --no-default-browser-check --disable-default-apps --password-store=basic &'
+os.system(command)
 app = FastAPI()
 
 @app.get('/render')
