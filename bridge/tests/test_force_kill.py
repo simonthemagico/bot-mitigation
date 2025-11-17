@@ -4,7 +4,7 @@ import subprocess
 import os
 
 # API Endpoint
-BASE_URL = "https://api.bridge.lobstr.io"
+BASE_URL = "https://api.bridge.datamonkeyz.com"
 TOKEN = "77f6bc041b99accf93093ebdc67a45ef472a4496"  # Replace with your actual token
 
 def test_create_task():

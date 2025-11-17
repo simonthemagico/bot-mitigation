@@ -128,6 +128,24 @@ class GoogleSearchBypass(BaseBypass):
             print('Waiting 5 seconds')
             time.sleep(5)
 
+            # Click "Accept all" button if cookie consent popup appears
+            print('Checking for cookie consent popup...')
+            accept_button_clicked = tab.Runtime.evaluate(expression="""
+                (function() {
+                    const btn = document.getElementById('L2AGLb');
+                    if (btn && btn.offsetParent !== null) {
+                        btn.click();
+                        return true;
+                    }
+                    return false;
+                })();
+            """)["result"]["value"]
+            if accept_button_clicked:
+                print('✓ Clicked "Accept all" cookie consent button')
+                time.sleep(2)
+            else:
+                print('✓ No cookie consent popup detected')
+
             # Check for captcha presence on the page
             print('Checking for captcha...')
             start = time.time()

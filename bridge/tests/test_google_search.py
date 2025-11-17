@@ -7,6 +7,7 @@ import uuid
 from modules.google_search import GoogleSearchBypass
 import time
 
+
 def test_google_bypass():
     print("=== Testing Google Search Bypass ===")
     task_id = f"{uuid.uuid4().hex}"
@@ -21,22 +22,19 @@ def test_google_bypass():
         headless=False
     )
 
-    try:
-        print("\n1. Starting bypass process...")
-        content, cookies, curl = bypass.bypass()
+    print("\n1. Starting bypass process...")
+    page_content, cookies_dict, headers_dict, curl_command = bypass.bypass()
 
-        print("\n2. Results:")
-        print(f"\nCookies received:")
-        for k, v in cookies.items():
-            print(f"  {k}: {v}")
+    print("\n2. Results:")
+    print(f"\nCookies received:")
+    for k, v in cookies_dict.items():
+        print(f"  {k}: {v}")
 
-        print(f"\nCurl command:")
-        print(curl)
+    print(f"\nCurl command:")
+    print(curl_command)
 
-        print("\nContent saved to test.html")
+    print("\nContent saved to test.html")
 
-    except Exception as e:
-        print(f"\nError during test: {e}")
 
 if __name__ == "__main__":
     test_google_bypass()

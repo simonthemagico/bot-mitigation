@@ -1,3 +1,10 @@
+import sys
+from pathlib import Path
+
+# Add parent directory to path to allow imports from modules
+bridge_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(bridge_dir))
+
 from fastapi import FastAPI, HTTPException, Security, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
@@ -43,8 +50,9 @@ TIMEOUT = 100  # seconds
 MAX_TASKS = 4
 
 # Set up logging
+log_file = bridge_dir / 'logs' / 'bridge.log'
 logging.basicConfig(
-    filename='logs/bridge.log',
+    filename=str(log_file),
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
@@ -99,14 +107,11 @@ async def lifespan(app: FastAPI):
 
 # Initialize FastAPI and task store
 app = FastAPI(
-    title="bridge.lobstr.io",
+    title="bridge.datamonkeyz.com",
     description="JS browser bypass API",
     version="1.0.0", 
     lifespan=lifespan
 )
-
-# Serve static files for Let's Encrypt (no auth required)
-app.mount("/.well-known/acme-challenge", StaticFiles(directory="/opt/homebrew/var/www/.well-known/acme-challenge"), name="acme-challenge")
 
 # Simple in-memory store
 task_store = {}

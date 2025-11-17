@@ -2,7 +2,7 @@ import requests
 import time
 
 # API Configuration
-API_BASE_URL = "https://api.bridge.lobstr.io"
+API_BASE_URL = "https://api.bridge.datamonkeyz.com"
 TOKEN = "77f6bc041b99accf93093ebdc67a45ef472a4496"  # Replace with your actual token
 
 # Headers
