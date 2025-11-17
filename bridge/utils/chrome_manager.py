@@ -13,7 +13,7 @@ from .proxy_manager import ProxyManager
 def get_chrome_path():
     """Get the Chrome executable path based on OS"""
     system = platform.system()
-    
+
     if system == "Darwin":  # macOS
         paths = [
             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -36,7 +36,7 @@ def get_chrome_path():
             return expanded_path
         if system == "Linux" and shutil.which(path):
             return path
-            
+
     raise FileNotFoundError(f"Chrome not found in standard locations for {system}")
 
 def get_default_paths():
@@ -49,20 +49,20 @@ def get_default_paths():
 
 class ChromeManager:
     def __init__(
-            self, 
-            proxy_port, 
-            chrome_port, 
+            self,
+            proxy_port,
+            chrome_port,
             extension_path="extensions/capsolver",
             # adblock_extension_path="extensions/ublock",
             adblock_extension_path=None,
             disable_images=True,
             user_data_dir=None,
-            headless=False, 
+            headless=False,
             disable_http2=False,
             command=None
         ):
         """Initialize Chrome manager
-        
+
         Args:
             proxy_port: Port number for proxy
             chrome_port: Port for Chrome debugging
@@ -87,20 +87,20 @@ class ChromeManager:
 
         if command is None:
             self._setup_chrome_command(
-                proxy_port, 
-                chrome_port, 
-                extension_path, 
-                adblock_extension_path, 
+                proxy_port,
+                chrome_port,
+                extension_path,
+                adblock_extension_path,
                 user_data_dir
             )
         else:
             self.command = command
 
     def _setup_chrome_command(
-            self, 
-            proxy_port, 
-            chrome_port, 
-            extension_path, 
+            self,
+            proxy_port,
+            chrome_port,
+            extension_path,
             adblock_extension_path,
             user_data_dir
         ):
@@ -112,8 +112,8 @@ class ChromeManager:
             f"--remote-debugging-port={chrome_port}",
             # f"--proxy-server=127.0.0.1:{proxy_port}",
             "--no-first-run",
-            "--no-default-browser-check", 
-            "--disable-gpu", 
+            "--no-default-browser-check",
+            "--disable-gpu",
             "--password-store=basic",
             # "--new-window",
         ]
@@ -135,20 +135,28 @@ class ChromeManager:
             paths = get_default_paths()
             if not os.path.isabs(user_data_dir):
                 user_data_dir = os.path.join(paths['profiles'], user_data_dir)
+            
+            # If a template profile exists, clone it to preserve dev mode / extension settings
+            template_profile = os.path.join(paths['profiles'], "_template_capsolver")
+            if os.path.exists(template_profile) and not os.path.exists(user_data_dir):
+                print(f"Cloning template profile from {template_profile} to {user_data_dir}")
+                shutil.copytree(template_profile, user_data_dir, dirs_exist_ok=True)
+            else:
                 os.makedirs(user_data_dir, exist_ok=True)
+            
             self.command.append(f"--user-data-dir={user_data_dir}")
         else:
             self.command.append("--incognito")
 
         # Add performance flags
         self.command.extend([
-            "--disable-renderer-accessibility", 
+            "--disable-renderer-accessibility",
             "--disable-translate",
             "--disable-infobars",
             "--disable-notifications",
             "--disable-popup-blocking",
             "--disable-save-password-bubble",
-            
+
             # NEW: Prevent massive cache writes
             "--disk-cache-size=10485760",         # 10 MB
             "--media-cache-size=1048576",         # 1 MB
@@ -160,9 +168,9 @@ class ChromeManager:
         # Handle extensions - always resolve relative to bridge root
         extensions = []
         for path in [
-            extension_path, 
+            extension_path,
             adblock_extension_path
-        ]: 
+        ]:
             if path:
                 if not os.path.isabs(path):
                     path = os.path.join(self.bridge_root, path)
@@ -172,12 +180,12 @@ class ChromeManager:
                     raise FileNotFoundError(f"Extension not found: {path}")
         if extensions:
             self.command.append(f"--load-extension={','.join(extensions)}")
-            self.command.append(f"--disable-extensions-except={','.join(extensions)}")
+            #self.command.append(f"--disable-extensions-except={','.join(extensions)}")
 
         if self.headless:
             self.command.append("--headless")
 
-        if self.disable_http2: 
+        if self.disable_http2:
             self.command.append("--disable-http2")
 
     def create_chrome(self):
@@ -188,17 +196,17 @@ class ChromeManager:
                 env["DISPLAY"] = ":1"
 
             print("Starting Chrome with command:", " ".join(self.command))  # Debugging line
-            
+
             self.chrome_process = subprocess.Popen(
                 self.command,
                 env=env,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, 
+                stderr=subprocess.PIPE,
                 text=True
             )
 
             time.sleep(5)
-            
+
             print("Chrome started successfully!")
 
             # Check if process is still running
@@ -209,7 +217,7 @@ class ChromeManager:
                 print("Stdout:", stdout)
                 print("Stderr:", stderr)
                 raise Exception("Chrome failed to start")
-                
+
             print("\nChrome process started with PID:", self.chrome_process.pid)
             print(f"Expected DevTools URL: http://127.0.0.1:{self.chrome_port}")
 
@@ -234,7 +242,7 @@ class ChromeManager:
             # 1) Terminate Chrome if running
             if self.chrome_process:
                 self.chrome_process.terminate()
-                
+
                 timeout = 5
                 start_time = time.time()
 
@@ -243,7 +251,7 @@ class ChromeManager:
                         print(f"Chrome process {self.chrome_process.pid} exited successfully.")
                         break
                     time.sleep(0.5)
-                
+
                 # If Chrome is still running, force kill
                 if self.chrome_process.poll() is None:
                     print(f"Chrome process {self.chrome_process.pid} did not exit, force killing...")
@@ -294,10 +302,10 @@ def test_chrome():
     try:
         # Start Chrome
         chrome_manager.create_chrome()
-        
+
         print("\n⏳ Waiting for Chrome DevTools API to be ready...")
         time.sleep(5)  # Increased wait time
-        
+
         print("\n🔍 Checking Chrome DevTools API availability...")
         for attempt in range(5):
             try:
@@ -325,7 +333,7 @@ def test_chrome():
         # Enable Network and Page
         tab.Network.enable()
         tab.Page.enable()
-        
+
         # Test proxy
         print("🌐 Navigating to IP check...")
         tab.Page.navigate(url="https://api.ipify.org")

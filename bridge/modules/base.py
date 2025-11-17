@@ -8,14 +8,14 @@ from datetime import datetime
 
 class BaseBypass:
     def __init__(
-            self, 
-            proxy_pool: str, 
-            url: str, 
+            self,
+            proxy_pool: str,
+            url: str,
             task_id: str,
             headless: bool = False,
-            user_data_dir = "sasha", 
-            extension_path = None, 
-            disable_images: bool = True, 
+            user_data_dir = "/Users/m1/chrome-data-dir",
+            extension_path = None,
+            disable_images: bool = True,
             disable_http2 : bool = False
         ):
 
@@ -33,11 +33,11 @@ class BaseBypass:
 
         self.proxy_server = None
         self.chrome = None
-        
+
     def generate_unique_ports(self):
         max_attempts = 1000
         attempt = 0
-        
+
         while attempt < max_attempts:
             proxy_port = random.randint(1024, 65535) & ~1 # even port
             chrome_port = proxy_port + 1
@@ -45,9 +45,9 @@ class BaseBypass:
                 return proxy_port, chrome_port
 
             attempt += 1
-        
+
         raise RuntimeError(f"Could not find available port pair after {max_attempts} attempts")
-    
+
     def is_port_available(self,port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
@@ -55,24 +55,24 @@ class BaseBypass:
                 return True
             except OSError:
                 return False
-        
+
     def initialize(self):
 
         if not self.proxy_port or not self.chrome_port:
             self.proxy_port, self.chrome_port = self.generate_unique_ports()
-            
+
         self.proxy_server = ProxyManager(
             proxy_pool=self.proxy_pool,
             proxy_port=self.proxy_port
         )
-        
+
         self.chrome = ChromeManager(
             proxy_port=self.proxy_port,
             chrome_port=self.chrome_port,
             headless=self.headless,
             user_data_dir=self.user_data_dir,
-            extension_path=self.extension_path, 
-            disable_images=self.disable_images, 
+            extension_path=self.extension_path,
+            disable_images=self.disable_images,
             disable_http2=self.disable_http2
         )
 
@@ -94,7 +94,7 @@ class BaseBypass:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
         print(f"Page content saved to '{filepath}'")
-        
+
         return filepath
 
     def bypass(self):

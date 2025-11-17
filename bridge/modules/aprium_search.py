@@ -1,20 +1,10 @@
 import time
 import json
-import websocket
 import pychrome
 from urllib.parse import urlparse, unquote
-from pychrome.tab import Tab
-from .base import BaseBypass
 
-# SILENCE pychrome’s background errors
-_orig_recv = Tab._recv_loop
-def _safe_recv_loop(self):
-    try:
-        _orig_recv(self)
-    except (websocket._exceptions.WebSocketConnectionClosedException,
-            json.decoder.JSONDecodeError):
-        return
-Tab._recv_loop = _safe_recv_loop
+from .base import BaseBypass
+from utils import pychrome_safe  # noqa: F401  (ensures monkeypatch is applied)
 
 
 class ApriumSearchByPass(BaseBypass):

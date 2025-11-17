@@ -8,14 +8,9 @@ import json
 import os
 import base64
 
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_KEY: 
-    raise RuntimeError(
-        "OPENAI_API_KEY manquante : exporte-la ou passe-la en dur.\n"
-        "ex.  export OPENAI_API_KEY='sk-…'"
-    )
+from utils import pychrome_safe  # noqa: F401  (ensures monkeypatch is applied)
 
-client_ocr = OpenAI(api_key=OPENAI_KEY)
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 
 def ocr_json_bytes(img_bytes: bytes, model: str = "gpt-4o-mini") -> str:
@@ -43,12 +38,14 @@ class GoogleSearchBypass(BaseBypass):
 
     def __init__(self, proxy_pool: str, url: str, task_id: str, headless: bool = True):
         super().__init__(
-            proxy_pool, 
-            url, 
-            task_id, 
-            headless, 
-            user_data_dir=f"sasha_{task_id}",
-            extension_path="extensions/capsolver", 
+            proxy_pool,
+            url,
+            task_id,
+            headless,
+            user_data_dir=f"google_search_{task_id}",
+            # Important: point directly to the unpacked Capsolver extension root
+            # (the version directory which contains manifest.json).
+            extension_path="extensions/pgojnojmmhpofjgdmaebadhbocahppod/1.17.0_0",
             disable_images=False
         )
         self.initialize()
@@ -75,7 +72,7 @@ class GoogleSearchBypass(BaseBypass):
 
             browser = pychrome.Browser(url=f"http://localhost:{self.chrome_port}")
             print("Connected to Chrome Remote Debugger.")
-            
+
             version_info = browser.version()
             print("Browser Version:", version_info['Browser'])
 
@@ -93,7 +90,7 @@ class GoogleSearchBypass(BaseBypass):
 
                 request_url = request.get("url", "")
 
-                if request_url == self.url: 
+                if request_url == self.url:
                     headers = request.get("headers", {})
                     captured_headers.update(headers)
 
@@ -111,10 +108,10 @@ class GoogleSearchBypass(BaseBypass):
                 if authority and path and scheme:
                     full_url = f"{scheme}://{authority}{path}"
                     # print(f"Reconstructed Full URL: {full_url}")
-                
-                if full_url == self.url:  
+
+                if full_url == self.url:
                     captured_headers.update(headers)
-                    
+
                     print('Complete Params')
                     # print(json.dumps(params, indent=4))
 
@@ -127,7 +124,7 @@ class GoogleSearchBypass(BaseBypass):
 
             print(f"Navigating to URL: {self.url}")
             tab.Page.navigate(url=self.url, _timeout=10)
-            
+
             print('Waiting 5 seconds')
             time.sleep(5)
 
@@ -135,11 +132,11 @@ class GoogleSearchBypass(BaseBypass):
             print('Checking for captcha...')
             start = time.time()
             captcha_timeout = 180
-            
-            while True: 
+
+            while True:
                 time.sleep(3)
                 ctype = tab.Runtime.evaluate(expression=self.JS_DETECT)["result"]["value"]
-                
+
                 if ctype == "none":
                     print("✔️  No captcha → going on")
                     break
@@ -163,10 +160,10 @@ class GoogleSearchBypass(BaseBypass):
                             return c.toDataURL('image/png').split(',')[1];
                         })();
                     """)["result"]["value"]
-                    
+
                     if not img_b64:
                         raise RuntimeError("Not possible to capture captcha image")
-                
+
                     img_bytes = base64.b64decode(img_b64)
                     code = ocr_json_bytes(img_bytes)
                     print(f"OCR → {code}")
@@ -177,7 +174,7 @@ class GoogleSearchBypass(BaseBypass):
                     """)
                     time.sleep(3)
                     continue
-            
+
             print('Waiting done')
             # Waiting after Captcha solved
             time.sleep(5)
@@ -189,7 +186,7 @@ class GoogleSearchBypass(BaseBypass):
 
             # Fetch the headers
             headers_dict = {
-                k: v for k, v in captured_headers.items() 
+                k: v for k, v in captured_headers.items()
                 if k.lower() not in ['cookie', 'accept-encoding'] and not k.startswith(':')
             }
             headers_dict
@@ -198,6 +195,9 @@ class GoogleSearchBypass(BaseBypass):
             result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
             page_content = result.get("result", {}).get("value", "")
             print("Page Content retrieved.")
+
+            print("wait for input")
+            input()
 
             # Use base class method to save content
             filepath = self.save_page_content(
@@ -216,7 +216,7 @@ class GoogleSearchBypass(BaseBypass):
             assert all([page_content, cookie_dict, curl_command])
 
             return page_content, cookie_dict, headers_dict, curl_command
-        
+
         except Exception as e:
             print(f"Error during operation: {e}")
             raise e
