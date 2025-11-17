@@ -19,6 +19,7 @@ import asyncio
 import secrets
 import re
 from contextlib import asynccontextmanager
+import traceback
 
 from modules.google_search import GoogleSearchBypass
 from modules.seloger_search import SeLogerSearchBypass
@@ -33,14 +34,14 @@ VALID_TOKENS = {
 async def verify_token(authorization: str = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="No authorization header")
-    
+
     if not authorization.startswith("Token "):
         raise HTTPException(status_code=401, detail="Invalid token format. Use 'Token {token}'")
-    
+
     token = authorization.replace("Token ", "")
     if token not in VALID_TOKENS:
         raise HTTPException(status_code=403, detail="Invalid token")
-        
+
     return token
 
 # Constant for timeout
@@ -49,12 +50,16 @@ TIMEOUT = 100  # seconds
 # Constant for max concurrent tasks
 MAX_TASKS = 4
 
-# Set up logging
+# Set up logging (both file and console so tracebacks are visible)
 log_file = bridge_dir / 'logs' / 'bridge.log'
+log_file.parent.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
-    filename=str(log_file),
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(str(log_file)),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -94,7 +99,7 @@ BYPASS_HANDLERS = {
     BypassMethod.GOOGLE_SEARCH: GoogleSearchBypass,
     BypassMethod.SELOGER_SEARCH: SeLogerSearchBypass,
     BypassMethod.LOUISVUITTON_SEARCH: LouisVuittonSearchByPass,
-    BypassMethod.APRIUM_SEARCH: ApriumSearchByPass, 
+    BypassMethod.APRIUM_SEARCH: ApriumSearchByPass,
     BypassMethod.YELP_SEARCH: YelpSearchBypass,
 }
 
@@ -102,14 +107,14 @@ BYPASS_HANDLERS = {
 async def lifespan(app: FastAPI):
     asyncio.create_task(cleanup_old_tasks())
     await asyncio.sleep(1)
-    yield  
-    logger.info("Shutting down cleanup task...") 
+    yield
+    logger.info("Shutting down cleanup task...")
 
 # Initialize FastAPI and task store
 app = FastAPI(
     title="bridge.datamonkeyz.com",
     description="JS browser bypass API",
-    version="1.0.0", 
+    version="1.0.0",
     lifespan=lifespan
 )
 
@@ -123,7 +128,7 @@ def generate_task_id():
 
 @app.post("/task", response_model=TaskResponse)
 async def create_task(
-        task: TaskRequest, 
+        task: TaskRequest,
         token: str = Depends(verify_token)
     ):
     # 1. Count tasks in PENDING or IN_PROGRESS
@@ -149,8 +154,8 @@ async def create_task(
         bypass_method=task.bypass_method
     )
     task_store[task_id] = {
-        **initial_response.dict(), 
-        "handler": None, 
+        **initial_response.dict(),
+        "handler": None,
         "timestamp": time.time()
     }
 
@@ -160,12 +165,12 @@ async def create_task(
 
 # Separate function for task execution
 async def execute_bypass_with_timeout(
-        task_id: str, 
-        task: TaskRequest, 
-        timeout_seconds: int    
+        task_id: str,
+        task: TaskRequest,
+        timeout_seconds: int
     ):
     handler = None
-    try: 
+    try:
         # Update status to in progress
         task_store[task_id].update({"status": TaskStatus.IN_PROGRESS})
 
@@ -189,10 +194,10 @@ async def execute_bypass_with_timeout(
 
         # Wait for the bypass to complete with timeout
         page_content, cookies, headers, curl_command = await asyncio.wait_for(
-            bypass_task, 
+            bypass_task,
             timeout=timeout_seconds
         )
-        
+
         # Update task store with success
         task_store[task_id].update({
             "status": TaskStatus.DONE,
@@ -202,22 +207,18 @@ async def execute_bypass_with_timeout(
         })
 
         logger.info(f"Task {task_id} completed successfully")
-    
-    except asyncio.TimeoutError: 
-        logger.error(f"Task {task_id} timed out after {timeout_seconds} seconds")
+
+    except asyncio.TimeoutError:
+        # Log full traceback for debugging timeouts
+        logger.exception(f"Task {task_id} timed out after {timeout_seconds} seconds")
 
         # Ensure Chrome is killed if handler was created
         if handler:
             logger.info(f"Cleaning up Chrome instance for timed out task {task_id}")
-            try:
-                # Run cleanup in executor to avoid blocking
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(None, handler.cleanup)
-                logger.info(f"Successfully terminated Chrome instance for task {task_id}")
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, handler.cleanup)
+            logger.info(f"Successfully terminated Chrome instance for task {task_id}")
 
-            except Exception as cleanup_error:
-                logger.error(f"Error during cleanup after timeout for task {task_id}: {str(cleanup_error)}")
-        
         # Handle timeout - ensure proper cleanup
         task_store[task_id].update({
             "status": TaskStatus.TIMEOUT,
@@ -225,7 +226,9 @@ async def execute_bypass_with_timeout(
         })
 
     except Exception as e:
-        logger.error(f"Task {task_id} failed: {str(e)}")
+        # Capture full traceback so it's available both in logs and API response
+        error_trace = traceback.format_exc()
+        logger.error(f"Task {task_id} failed with traceback:\n{error_trace}")
 
         # Ensure cleanup happens even on error
         if handler:
@@ -235,11 +238,12 @@ async def execute_bypass_with_timeout(
                 await loop.run_in_executor(None, handler.cleanup)
                 logger.info(f"Terminated Chrome instance after error for task {task_id}")
             except Exception as cleanup_error:
-                logger.error(f"Error during cleanup after error for task {task_id}: {str(cleanup_error)}")
-        
+                # Also log full traceback if cleanup itself fails
+                logger.exception(f"Error during cleanup after error for task {task_id}: {str(cleanup_error)}")
+
         task_store[task_id].update({
             "status": TaskStatus.ERROR,
-            "error": str(e)
+            "error": error_trace
         })
 
 # Cleanup tasks older than 10 min.
@@ -249,29 +253,29 @@ async def cleanup_old_tasks():
         now = time.time()
         expired_tasks = [
             task_id for task_id, task in list(task_store.items())  # Use list() to avoid runtime changes error
-            if task["status"] in [TaskStatus.DONE, TaskStatus.ERROR, TaskStatus.TIMEOUT] 
+            if task["status"] in [TaskStatus.DONE, TaskStatus.ERROR, TaskStatus.TIMEOUT]
             and now - task["timestamp"] > 600  # Remove tasks older than 10 min
         ]
-        
+
         if expired_tasks:
             logger.info(f"Cleaning up {len(expired_tasks)} expired tasks...")
 
         for task_id in expired_tasks:
-            try: 
+            try:
                 task_store.pop(task_id, None)
-            except KeyError: 
+            except KeyError:
                 pass
 
         await asyncio.sleep(300)
 
 @app.get("/task/{task_id}", response_model=TaskResponse)
 async def get_task(
-        task_id: str, 
+        task_id: str,
         token: str = Depends(verify_token)
     ):
     if task_id not in task_store:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     # Create a copy of the task data without the handler
     task_data = {k: v for k, v in task_store[task_id].items() if k != "handler"}
 
@@ -284,7 +288,7 @@ async def health_check(
     return {
         "status": "healthy",
         "timestamp": int(time.time()),
-        "tasks_in_store": len(task_store), 
+        "tasks_in_store": len(task_store),
         "active_tasks": sum(
             1 for t in task_store.values()
             if t["status"] in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]

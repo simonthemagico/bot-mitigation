@@ -14,6 +14,7 @@ OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 
 def ocr_json_bytes(img_bytes: bytes, model: str = "gpt-4o-mini") -> str:
+    client_ocr = OpenAI(api_key=OPENAI_KEY)
     """OCR via OpenAI Vision → renvoie le texte."""
     b64 = base64.b64encode(img_bytes).decode()
     r = client_ocr.chat.completions.create(
@@ -61,184 +62,175 @@ class GoogleSearchBypass(BaseBypass):
     """
 
     def bypass(self):
-        try:
-            print("Starting Proxy Server...")
-            self.proxy_server.start_proxy_server()
+        print("Starting Proxy Server...")
+        self.proxy_server.start_proxy_server()
 
-            print("Starting Chrome Browser...")
-            self.chrome.create_chrome()
+        print("Starting Chrome Browser...")
+        self.chrome.create_chrome()
 
-            time.sleep(1)
+        time.sleep(1)
 
-            browser = pychrome.Browser(url=f"http://localhost:{self.chrome_port}")
-            print("Connected to Chrome Remote Debugger.")
+        browser = pychrome.Browser(url=f"http://localhost:{self.chrome_port}")
+        print("Connected to Chrome Remote Debugger.")
 
-            version_info = browser.version()
-            print("Browser Version:", version_info['Browser'])
+        version_info = browser.version()
+        print("Browser Version:", version_info['Browser'])
 
-            # Tab management
-            tab = browser.list_tab(timeout=5)[0] if browser.list_tab(timeout=5) else browser.new_tab()
-            tab.start()
-            print("Tab started.")
+        # Tab management
+        tab = browser.list_tab(timeout=5)[0] if browser.list_tab(timeout=5) else browser.new_tab()
+        tab.start()
+        print("Tab started.")
 
-            tab.Network.enable()
-            tab.Page.enable()
+        tab.Network.enable()
+        tab.Page.enable()
 
-            captured_headers = {}
+        captured_headers = {}
 
-            def request_intercept(request, **kwargs):
+        def request_intercept(request, **kwargs):
 
-                request_url = request.get("url", "")
+            request_url = request.get("url", "")
 
-                if request_url == self.url:
-                    headers = request.get("headers", {})
-                    captured_headers.update(headers)
+            if request_url == self.url:
+                headers = request.get("headers", {})
+                captured_headers.update(headers)
 
-                    print('Complete Request')
-                    # print(json.dumps(request, indent=4))
+                print('Complete Request')
+                # print(json.dumps(request, indent=4))
 
-            def extra_info_intercept(**params):
+        def extra_info_intercept(**params):
 
-                headers = params.get("headers", {})
+            headers = params.get("headers", {})
 
-                authority = headers.get(":authority", "")
-                path = headers.get(":path", "")
-                scheme = headers.get(":scheme", "")
+            authority = headers.get(":authority", "")
+            path = headers.get(":path", "")
+            scheme = headers.get(":scheme", "")
 
-                if authority and path and scheme:
-                    full_url = f"{scheme}://{authority}{path}"
-                    # print(f"Reconstructed Full URL: {full_url}")
+            if authority and path and scheme:
+                full_url = f"{scheme}://{authority}{path}"
+                # print(f"Reconstructed Full URL: {full_url}")
 
-                if full_url == self.url:
-                    captured_headers.update(headers)
+            if full_url == self.url:
+                captured_headers.update(headers)
 
-                    print('Complete Params')
-                    # print(json.dumps(params, indent=4))
+                print('Complete Params')
+                # print(json.dumps(params, indent=4))
 
-            tab.Network.requestWillBeSent = request_intercept
-            tab.Network.requestWillBeSentExtraInfo = extra_info_intercept
+        tab.Network.requestWillBeSent = request_intercept
+        tab.Network.requestWillBeSentExtraInfo = extra_info_intercept
 
-            # print(f"Navigating to URL: https://api.ipify.org")
-            # tab.Page.navigate(url="https://api.ipify.org")
-            # time.sleep(5)
+        # print(f"Navigating to URL: https://api.ipify.org")
+        # tab.Page.navigate(url="https://api.ipify.org")
+        # time.sleep(5)
 
-            print(f"Navigating to URL: {self.url}")
-            tab.Page.navigate(url=self.url, _timeout=10)
+        print(f"Navigating to URL: {self.url}")
+        tab.Page.navigate(url=self.url, _timeout=10)
 
-            print('Waiting 5 seconds')
-            time.sleep(5)
+        print('Waiting 5 seconds')
+        time.sleep(5)
 
-            # Click "Accept all" button if cookie consent popup appears
-            print('Checking for cookie consent popup...')
-            accept_button_clicked = tab.Runtime.evaluate(expression="""
-                (function() {
-                    const btn = document.getElementById('L2AGLb');
-                    if (btn && btn.offsetParent !== null) {
-                        btn.click();
-                        return true;
-                    }
-                    return false;
-                })();
-            """)["result"]["value"]
-            if accept_button_clicked:
-                print('✓ Clicked "Accept all" cookie consent button')
-                time.sleep(2)
-            else:
-                print('✓ No cookie consent popup detected')
+        # Click "Accept all" button if cookie consent popup appears
+        print('Checking for cookie consent popup...')
+        accept_button_clicked = tab.Runtime.evaluate(expression="""
+            (function() {
+                const btn = document.getElementById('L2AGLb');
+                if (btn && btn.offsetParent !== null) {
+                    btn.click();
+                    return true;
+                }
+                return false;
+            })();
+        """)["result"]["value"]
+        if accept_button_clicked:
+            print('✓ Clicked "Accept all" cookie consent button')
+            time.sleep(2)
+        else:
+            print('✓ No cookie consent popup detected')
 
-            # Check for captcha presence on the page
-            print('Checking for captcha...')
-            start = time.time()
-            captcha_timeout = 180
+        # Check for captcha presence on the page
+        print('Checking for captcha...')
+        start = time.time()
+        captcha_timeout = 180
 
-            while True:
+        while True:
+            time.sleep(3)
+            ctype = tab.Runtime.evaluate(expression=self.JS_DETECT)["result"]["value"]
+
+            if ctype == "none":
+                print("✔️  No captcha → going on")
+                break
+
+            if ctype == "recaptcha":
+                print("⏳ reCAPTCHA identified, wait for Capsolver extension")
+                if time.time() - start > captcha_timeout:
+                    raise RuntimeError("reCAPTCHATimeOutError")
+                time.sleep(1)
+                continue
+
+            if ctype == "image":
+                print("🖼️  Captcha image identified, OpenAI resolution...")
+                img_b64 = tab.Runtime.evaluate(expression="""
+                    (function () {
+                        const img = document.querySelector('img[src*="/sorry/image"]');
+                        if (!img) return null;
+                        const c = document.createElement('canvas');
+                        c.width = img.naturalWidth; c.height = img.naturalHeight;
+                        c.getContext('2d').drawImage(img, 0, 0);
+                        return c.toDataURL('image/png').split(',')[1];
+                    })();
+                """)["result"]["value"]
+
+                if not img_b64:
+                    raise RuntimeError("Not possible to capture captcha image")
+
+                img_bytes = base64.b64decode(img_b64)
+                code = ocr_json_bytes(img_bytes)
+                print(f"OCR → {code}")
+
+                tab.Runtime.evaluate(expression=f"""
+                    document.querySelector('input[name="captcha"]').value = "{code}";
+                    document.getElementById('captcha-form').submit();
+                """)
                 time.sleep(3)
-                ctype = tab.Runtime.evaluate(expression=self.JS_DETECT)["result"]["value"]
+                continue
 
-                if ctype == "none":
-                    print("✔️  No captcha → going on")
-                    break
+        print('Waiting done')
+        # Waiting after Captcha solved
+        time.sleep(5)
 
-                if ctype == "recaptcha":
-                    print("⏳ reCAPTCHA identified, wait for Capsolver extension")
-                    if time.time() - start > captcha_timeout:
-                        raise RuntimeError("reCAPTCHATimeOutError")
-                    time.sleep(1)
-                    continue
+        # Fetch the cookies
+        cookies_list = tab.Network.getCookies()['cookies']
+        cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies_list}
+        print("Cookies Retrieved:", cookie_dict)
 
-                if ctype == "image":
-                    print("🖼️  Captcha image identified, OpenAI resolution...")
-                    img_b64 = tab.Runtime.evaluate(expression="""
-                        (function () {
-                            const img = document.querySelector('img[src*="/sorry/image"]');
-                            if (!img) return null;
-                            const c = document.createElement('canvas');
-                            c.width = img.naturalWidth; c.height = img.naturalHeight;
-                            c.getContext('2d').drawImage(img, 0, 0);
-                            return c.toDataURL('image/png').split(',')[1];
-                        })();
-                    """)["result"]["value"]
+        # Fetch the headers
+        headers_dict = {
+            k: v for k, v in captured_headers.items()
+            if k.lower() not in ['cookie', 'accept-encoding'] and not k.startswith(':')
+        }
+        headers_dict
 
-                    if not img_b64:
-                        raise RuntimeError("Not possible to capture captcha image")
+        # Get the page content
+        result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
+        page_content = result.get("result", {}).get("value", "")
+        print("Page Content retrieved.")
 
-                    img_bytes = base64.b64decode(img_b64)
-                    code = ocr_json_bytes(img_bytes)
-                    print(f"OCR → {code}")
+        # Use base class method to save content
+        filepath = self.save_page_content(
+            content=page_content,
+            prefix="bypass"
+        )
 
-                    tab.Runtime.evaluate(expression=f"""
-                        document.querySelector('input[name="captcha"]').value = "{code}";
-                        document.getElementById('captcha-form').submit();
-                    """)
-                    time.sleep(3)
-                    continue
+        # Format cookies for curl
+        cookies_curl = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
+        headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in headers_dict.items()])
+        curl_command = f"curl -x {self.proxy_pool} '{self.url}' --cookie '{cookies_curl}' {headers_curl} -o ~/test.html"
 
-            print('Waiting done')
-            # Waiting after Captcha solved
-            time.sleep(5)
+        print("\nGenerated cURL Command:")
+        print(curl_command)
 
-            # Fetch the cookies
-            cookies_list = tab.Network.getCookies()['cookies']
-            cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies_list}
-            print("Cookies Retrieved:", cookie_dict)
+        assert all([page_content, cookie_dict, curl_command])
 
-            # Fetch the headers
-            headers_dict = {
-                k: v for k, v in captured_headers.items()
-                if k.lower() not in ['cookie', 'accept-encoding'] and not k.startswith(':')
-            }
-            headers_dict
+        print("Cleaning up...")
+        self.cleanup()
 
-            # Get the page content
-            result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
-            page_content = result.get("result", {}).get("value", "")
-            print("Page Content retrieved.")
-
-            print("wait for input")
-            input()
-
-            # Use base class method to save content
-            filepath = self.save_page_content(
-                content=page_content,
-                prefix="bypass"
-            )
-
-            # Format cookies for curl
-            cookies_curl = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
-            headers_curl = " ".join([f"-H '{k}: {v}'" for k, v in headers_dict.items()])
-            curl_command = f"curl -x {self.proxy_pool} '{self.url}' --cookie '{cookies_curl}' {headers_curl} -o ~/test.html"
-
-            print("\nGenerated cURL Command:")
-            print(curl_command)
-
-            assert all([page_content, cookie_dict, curl_command])
-
-            return page_content, cookie_dict, headers_dict, curl_command
-
-        except Exception as e:
-            print(f"Error during operation: {e}")
-            raise e
-
-        finally:
-            print("Cleaning up...")
-            self.cleanup()
+        return page_content, cookie_dict, headers_dict, curl_command

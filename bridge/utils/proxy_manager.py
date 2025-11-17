@@ -1,5 +1,6 @@
 import subprocess
 import time
+import sys
 
 
 class ProxyManager:
@@ -7,38 +8,41 @@ class ProxyManager:
         self.proxy_pool = proxy_pool
         self.port = str(proxy_port)
         self.proxy_process = None
+
+        # Use the same interpreter that is running this process, so we
+        # always hit the environment where the `proxy` module is installed.
         self.command = [
-            "python3", "-m", "proxy",
-            "--proxy-pool", self.proxy_pool,
-            "--port", self.port,
-            "--plugins", "proxy.plugin.ProxyPoolPlugin"
+            sys.executable,
+            "-m",
+            "proxy",
+            "--proxy-pool",
+            self.proxy_pool,
+            "--port",
+            self.port,
+            "--plugins",
+            "proxy.plugin.ProxyPoolPlugin",
         ]
 
     def start_proxy_server(self):
-        try:
-            # Kill any existing proxy on this port
-            self.stop_proxy_server()
+        # Kill any existing proxy on this port
+        self.stop_proxy_server()
 
-            print(f"Starting proxy server on port {self.port}...")
-            self.proxy_process = subprocess.Popen(
-                self.command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            
-            # Wait a bit for proxy to start
-            time.sleep(2)
+        print(f"Starting proxy server on port {self.port}...")
+        self.proxy_process = subprocess.Popen(
+            self.command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        # Wait a bit for proxy to start
+        time.sleep(2)
 
-            # Check if process is still running
-            if self.proxy_process.poll() is None:
-                print(f"Proxy server started successfully on port {self.port}")
-            else:
-                stdout, stderr = self.proxy_process.communicate()
-                raise Exception(f"Proxy failed to start: {stderr.decode()}")
-
-        except Exception as e:
-            print(f"Error during proxy server setup: {e}")
-            raise
+        # Check if process is still running
+        if self.proxy_process.poll() is None:
+            print(f"Proxy server started successfully on port {self.port}")
+        else:
+            stdout, stderr = self.proxy_process.communicate()
+            raise Exception(f"Proxy failed to start: {stderr.decode()}")
 
     def stop_proxy_server(self):
         try:
