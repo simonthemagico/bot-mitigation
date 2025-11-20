@@ -118,6 +118,72 @@ class GoogleSearchBypass(BaseBypass):
         tab.Network.requestWillBeSent = request_intercept
         tab.Network.requestWillBeSentExtraInfo = extra_info_intercept
 
+        def accept_fullpage_consent_if_present():
+            """
+            Detect the new full-page consent screen (consent.google.com) and click the
+            “Accept” button automatically. Returns True if consent flow was detected
+            and completed, False otherwise.
+            """
+            check_script = """
+                (function() {
+                    const response = { detected: false, clicked: false };
+                    if (!/consent\\.google\\./i.test(window.location.hostname)) {
+                        return JSON.stringify(response);
+                    }
+                    response.detected = true;
+
+                    const forms = Array.from(document.querySelectorAll('form[action*="consent.google.com/save"]'));
+                    const isAcceptForm = (form) => {
+                        const inputs = Array.from(form.querySelectorAll('input[type="hidden"]'));
+                        const hasSC = inputs.some(input => input.name === "set_sc" && input.value === "true");
+                        const hasAPS = inputs.some(input => input.name === "set_aps" && input.value === "true");
+                        if (hasSC || hasAPS) return true;
+                        const submit = form.querySelector('input[type="submit"],button[type="submit"],button');
+                        if (!submit) return false;
+                        const text = (submit.value || submit.innerText || submit.textContent || "").toLowerCase();
+                        return /accept|accepter|aceptar|akzeptieren|accetta/.test(text);
+                    };
+
+                    const acceptForm = forms.find(isAcceptForm);
+                    if (!acceptForm) {
+                        return JSON.stringify(response);
+                    }
+
+                    const submit = acceptForm.querySelector('input[type="submit"],button[type="submit"],button');
+                    if (submit) {
+                        submit.click();
+                    } else {
+                        acceptForm.submit();
+                    }
+                    response.clicked = true;
+                    return JSON.stringify(response);
+                })();
+            """
+
+            start = time.time()
+            while time.time() - start < 30:
+                result = tab.Runtime.evaluate(expression=check_script)["result"]["value"]
+                if not result:
+                    return False
+                state = json.loads(result)
+                if not state.get("detected"):
+                    return False  # Not on consent page
+                if state.get("clicked"):
+                    print("Clicked full-page consent accept button. Waiting for redirect...")
+                    redirect_start = time.time()
+                    while time.time() - redirect_start < 20:
+                        host = tab.Runtime.evaluate(expression="window.location.hostname")["result"]["value"]
+                        if host and "consent.google" not in host.lower():
+                            print("Full-page consent cleared.")
+                            return True
+                        time.sleep(1)
+                    # still on consent page; retry once more
+                    time.sleep(1)
+                else:
+                    # consent detected but accept button not found
+                    return False
+            return False
+
         # print(f"Navigating to URL: https://api.ipify.org")
         # tab.Page.navigate(url="https://api.ipify.org")
         # time.sleep(5)
@@ -127,6 +193,9 @@ class GoogleSearchBypass(BaseBypass):
 
         print('Waiting 5 seconds')
         time.sleep(5)
+
+        if accept_fullpage_consent_if_present():
+            time.sleep(3)
 
         # Click "Accept all" button if cookie consent popup appears
         print('Checking for cookie consent popup...')
@@ -202,12 +271,27 @@ class GoogleSearchBypass(BaseBypass):
         cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies_list}
         print("Cookies Retrieved:", cookie_dict)
 
-        # Fetch the headers
-        headers_dict = {
-            k: v for k, v in captured_headers.items()
-            if k.lower() not in ['cookie', 'accept-encoding'] and not k.startswith(':')
-        }
-        headers_dict
+        # Fetch and deduplicate headers (HTTP/2 pseudo headers or case variants may repeat)
+        headers_dict = {}
+        for header_name, header_value in captured_headers.items():
+            if not header_name:
+                continue
+
+            normalized_name = header_name.strip()
+            if normalized_name.startswith(':'):
+                continue
+
+            lower_name = normalized_name.lower()
+            if lower_name in ('cookie', 'accept-encoding'):
+                continue
+
+            if lower_name in headers_dict:
+                continue  # Already recorded (case-insensitive)
+
+            canonical_name = "-".join(part.capitalize() for part in lower_name.split('-'))
+            headers_dict[lower_name] = (canonical_name, header_value)
+
+        headers_dict = {canonical: value for canonical, value in headers_dict.values()}
 
         # Get the page content
         result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
