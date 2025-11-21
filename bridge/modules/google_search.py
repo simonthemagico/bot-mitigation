@@ -85,35 +85,43 @@ class GoogleSearchBypass(BaseBypass):
         tab.Page.enable()
 
         captured_headers = {}
+        primary_request_id = None
+        main_frame_id = None
 
         def request_intercept(request, **kwargs):
+            nonlocal primary_request_id
 
+            request_id = kwargs.get("requestId")
+            frame_id = kwargs.get("frameId")
+            resource_type = kwargs.get("type")
             request_url = request.get("url", "")
 
-            if request_url == self.url:
-                headers = request.get("headers", {})
-                captured_headers.update(headers)
+            if request_id is None:
+                return
 
-                print('Complete Request')
-                # print(json.dumps(request, indent=4))
+            if primary_request_id is None:
+                same_frame = (main_frame_id is None) or (frame_id == main_frame_id)
+                is_document = (resource_type == "Document") or (resource_type is None)
+                if same_frame and is_document:
+                    primary_request_id = request_id
+
+            if request_id == primary_request_id:
+                headers = request.get("headers", {})
+                if headers:
+                    captured_headers.update(headers)
+                    print(f"Captured main document request headers ({request_url}) via requestWillBeSent")
 
         def extra_info_intercept(**params):
+            nonlocal primary_request_id
+
+            request_id = params.get("requestId")
+            if request_id != primary_request_id:
+                return
 
             headers = params.get("headers", {})
-
-            authority = headers.get(":authority", "")
-            path = headers.get(":path", "")
-            scheme = headers.get(":scheme", "")
-
-            if authority and path and scheme:
-                full_url = f"{scheme}://{authority}{path}"
-                # print(f"Reconstructed Full URL: {full_url}")
-
-            if full_url == self.url:
+            if headers:
                 captured_headers.update(headers)
-
-                print('Complete Params')
-                # print(json.dumps(params, indent=4))
+                print("Captured additional headers via requestWillBeSentExtraInfo")
 
         tab.Network.requestWillBeSent = request_intercept
         tab.Network.requestWillBeSentExtraInfo = extra_info_intercept
@@ -189,7 +197,14 @@ class GoogleSearchBypass(BaseBypass):
         # time.sleep(5)
 
         print(f"Navigating to URL: {self.url}")
-        tab.Page.navigate(url=self.url, _timeout=10)
+        navigation_result = tab.Page.navigate(url=self.url, _timeout=10)
+        main_frame_id = navigation_result.get("frameId") if navigation_result else None
+        if not main_frame_id:
+            try:
+                frame_tree = tab.Page.getFrameTree()
+                main_frame_id = frame_tree["frameTree"]["frame"]["id"]
+            except Exception:
+                main_frame_id = None
 
         print('Waiting 5 seconds')
         time.sleep(5)
@@ -296,13 +311,14 @@ class GoogleSearchBypass(BaseBypass):
         # Get the page content
         result = tab.Runtime.evaluate(expression="document.documentElement.outerHTML")
         page_content = result.get("result", {}).get("value", "")
-        print("Page Content retrieved.")
 
         # Use base class method to save content
         filepath = self.save_page_content(
             content=page_content,
             prefix="bypass"
         )
+
+        assert headers_dict
 
         # Format cookies for curl
         cookies_curl = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])

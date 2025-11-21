@@ -17,3 +17,7 @@
 
 /Users/administrator/Downloads/Projects/xhr-response-saver
 /home/matrix/Personal/bot-mitigation/datadome-captcha-extension
+
+
+# launch 
+/usr/bin/python3 -m uvicorn bridge.api.main:app --reload --host 0.0.0.0 --port 8000 --reload-dir bridge
