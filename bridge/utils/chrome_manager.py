@@ -59,7 +59,8 @@ class ChromeManager:
             user_data_dir=None,
             headless=False,
             disable_http2=False,
-            command=None
+            command=None,
+            profile_template_dir="_template_capsolver"
         ):
         """Initialize Chrome manager
 
@@ -76,6 +77,8 @@ class ChromeManager:
         self.headless = headless
         self.chrome_process = None
         self.user_data_dir = user_data_dir
+        self.profile_template_dir = profile_template_dir
+
         self.disable_images = disable_images
         self.disable_http2 = disable_http2
 
@@ -135,15 +138,33 @@ class ChromeManager:
             paths = get_default_paths()
             if not os.path.isabs(user_data_dir):
                 user_data_dir = os.path.join(paths['profiles'], user_data_dir)
-            
+
             # If a template profile exists, clone it to preserve dev mode / extension settings
-            template_profile = os.path.join(paths['profiles'], "_template_capsolver")
-            if os.path.exists(template_profile) and not os.path.exists(user_data_dir):
+            template_profile = self.profile_template_dir
+            if template_profile and not os.path.isabs(template_profile):
+                template_profile = os.path.join(paths['profiles'], template_profile)
+
+            if template_profile and os.path.exists(template_profile) and not os.path.exists(user_data_dir):
                 print(f"Cloning template profile from {template_profile} to {user_data_dir}")
-                shutil.copytree(template_profile, user_data_dir, dirs_exist_ok=True)
+                # Note: Do NOT ignore *.log - Chrome LevelDB files (e.g. 000003.log) store
+                # extension settings including API keys. Only ignore actual log files by name.
+                shutil.copytree(
+                    template_profile,
+                    user_data_dir,
+                    dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns(
+                        "Singleton*",
+                        "Crashpad",
+                        "RunningChromeVersion",
+                        "*.lock",
+                        "*.tmp",
+                        "LOG",       # Chrome's text log file (not LevelDB data)
+                        "LOG.old"    # Old text log
+                    )
+                )
             else:
                 os.makedirs(user_data_dir, exist_ok=True)
-            
+
             self.command.append(f"--user-data-dir={user_data_dir}")
         else:
             self.command.append("--incognito")
@@ -178,6 +199,11 @@ class ChromeManager:
                     extensions.append(path)
                 else:
                     raise FileNotFoundError(f"Extension not found: {path}")
+
+        if extensions and self.headless:
+            print("Extensions require headful Chrome; disabling headless mode.")
+            self.headless = False
+
         if extensions:
             self.command.append(f"--load-extension={','.join(extensions)}")
             #self.command.append(f"--disable-extensions-except={','.join(extensions)}")

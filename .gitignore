@@ -7,3 +7,5 @@ dsolver/files/*
 user-data-dir/
 logs
 .scratch
+bridge/browser_template/
+bridge/extensions/

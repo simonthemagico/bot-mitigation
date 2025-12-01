@@ -37,6 +37,8 @@ def ocr_json_bytes(img_bytes: bytes, model: str = "gpt-4o-mini") -> str:
 
 class GoogleSearchBypass(BaseBypass):
 
+    TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "browser_template"
+
     def __init__(self, proxy_pool: str, url: str, task_id: str, headless: bool = True):
         super().__init__(
             proxy_pool,
@@ -44,10 +46,12 @@ class GoogleSearchBypass(BaseBypass):
             task_id,
             headless,
             user_data_dir=f"google_search_{task_id}",
-            # Important: point directly to the unpacked Capsolver extension root
-            # (the version directory which contains manifest.json).
-            extension_path="extensions/pgojnojmmhpofjgdmaebadhbocahppod/1.17.0_0",
-            disable_images=False
+            # Extension is already installed in TEMPLATE_DIR profile with API key configured.
+            # Do NOT use extension_path here - it would cause Chrome to re-initialize the extension
+            # storage and lose the saved API key.
+            extension_path=None,
+            disable_images=False,
+            profile_template_dir=str(self.TEMPLATE_DIR)
         )
         self.initialize()
 

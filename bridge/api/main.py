@@ -48,7 +48,7 @@ async def verify_token(authorization: str = Header(None)):
 TIMEOUT = 100  # seconds
 
 # Constant for max concurrent tasks
-MAX_TASKS = 4
+MAX_TASKS = 15
 
 # Set up logging (both file and console so tracebacks are visible)
 log_file = bridge_dir / 'logs' / 'bridge.log'
